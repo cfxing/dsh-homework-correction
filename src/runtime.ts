@@ -7,7 +7,11 @@ export const inject = ['tools']
 
 export function bootstrap(ctx: Context): void {
   const runtime = ctx as any
-  const registerWeb = (web: any) => registerHomeworkWeb(web)
+  let disposeWeb: (() => void) | undefined
+  const registerWeb = (web: any) => {
+    disposeWeb?.()
+    disposeWeb = registerHomeworkWeb(web)
+  }
   try {
     if (typeof runtime.inject === 'function') runtime.inject(['webServer'], registerWeb)
     else if (runtime.webServer) registerWeb(runtime)
@@ -16,37 +20,42 @@ export function bootstrap(ctx: Context): void {
   }
 
   const tools = runtime.tools
+  let disposeTool: (() => void) | undefined
   if (!tools || typeof tools.register !== 'function') {
     console.warn('[dsh-homework-correction] tools service is unavailable; workspace remains available')
-    return
-  }
-  const dispose = tools.register({
-    name: 'grade_homework_image',
-    description: '对一张作业图片进行逐题批改。使用 DSH settings.yaml 中配置的视觉模型直接识别印刷题与手写作答（不依赖独立 OCR 服务），返回题目、学生答案、判定、标准答案、解析、错因、知识点与置信度。手写不清时必须标记待复核。',
-    parameters: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        image_data_url: { type: 'string', description: 'data:image/jpeg;base64,... 或 data:image/png;base64,... 图片数据 URL。' },
-        instruction: { type: 'string', description: '可选的学科、年级、评分标准或教师补充说明。' },
+  } else {
+    disposeTool = tools.register({
+      name: 'grade_homework_image',
+      description: '对一张作业图片进行逐题批改。使用 DSH settings.yaml 中配置的视觉模型直接识别印刷题与手写作答（不依赖独立 OCR 服务），返回题目、学生答案、判定、标准答案、解析、错因、知识点与置信度。手写不清时必须标记待复核。',
+      parameters: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          image_data_url: { type: 'string', description: 'data:image/jpeg;base64,... 或 data:image/png;base64,... 图片数据 URL。' },
+          instruction: { type: 'string', description: '可选的学科、年级、评分标准或教师补充说明。' },
+        },
+        required: ['image_data_url'],
       },
-      required: ['image_data_url'],
-    },
-    output: {
-      schema: { type: 'string' },
-      render: (_args: unknown, value: string) => [{ type: 'text', text: value }],
-    },
-    execute: async (args: { image_data_url: string; instruction?: string }) => {
-      if (!/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(args.image_data_url)) {
-        throw new Error('image_data_url 必须是 PNG/JPEG/WebP 的 base64 data URL')
-      }
-      if (args.image_data_url.length > 16_000_000) throw new Error('图片太大，请压缩到约 12 MB 以内')
-      const instruction = buildPrompt(args.instruction || '')
-      const result = await gradeImage(args.image_data_url, instruction)
-      return JSON.stringify(result, null, 2)
-    },
-  })
-  if (typeof ctx.effect === 'function') ctx.effect(() => () => { try { dispose?.() } catch {} }, 'dsh-homework-correction: tools')
+      output: {
+        schema: { type: 'string' },
+        render: (_args: unknown, value: string) => [{ type: 'text', text: value }],
+      },
+      execute: async (args: { image_data_url: string; instruction?: string }) => {
+        if (!/^data:image\/(png|jpeg|jpg|webp);base64,/i.test(args.image_data_url)) {
+          throw new Error('image_data_url 必须是 PNG/JPEG/WebP 的 base64 data URL')
+        }
+        if (args.image_data_url.length > 16_000_000) throw new Error('图片太大，请压缩到约 12 MB 以内')
+        const result = await gradeImage(args.image_data_url, buildPrompt(args.instruction || ''))
+        return JSON.stringify(result, null, 2)
+      },
+    })
+  }
+  if (typeof ctx.effect === 'function') {
+    ctx.effect(() => () => {
+      try { disposeTool?.() } catch {}
+      try { disposeWeb?.() } catch {}
+    }, 'dsh-homework-correction: lifecycle')
+  }
 }
 
 function buildPrompt(extra: string): string {
