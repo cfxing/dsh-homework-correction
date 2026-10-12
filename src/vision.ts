@@ -93,7 +93,7 @@ export async function gradeImage(imageDataUrl: string, instruction: string): Pro
     signal: AbortSignal.timeout(180_000),
   })
   const text = await response.text()
-  if (!response.ok) throw new Error('视觉模型请求失败（HTTP ' + response.status + '）：' + text.slice(0, 800))
+  if (!response.ok) throw new Error('视觉模型请求失败（HTTP ' + response.status + '）：' + text.replaceAll(provider.apiKey, '[REDACTED]').slice(0, 800))
   let payload: any
   try { payload = JSON.parse(text) } catch { throw new Error('视觉模型返回的不是有效 JSON 响应') }
   const content = payload?.choices?.[0]?.message?.content
