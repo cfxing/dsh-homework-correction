@@ -1,0 +1,8 @@
+{
+  "name": "dsh-homework-correction",
+  "version": "0.2.0",
+  "private": true,
+  "description": "DeepSeek Harness homework grading workflow with vision-model-first recognition",
+  "license": "MIT",
+  "keywords": ["deepseek-harness", "dsh-plugin", "homework", "grading", "vision-model"]
+}
