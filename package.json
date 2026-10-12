@@ -1,24 +1,66 @@
 {
   "name": "dsh-homework-correction",
-  "version": "0.2.0",
-  "description": "DeepSeek Harness homework correction workflow with vision-model-first recognition",
+  "version": "0.3.0",
+  "description": "Native DeepSeek Harness homework grading workspace powered by configured vision models",
   "type": "module",
+  "main": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
   "files": [
     "lib/**/*.js",
     "lib/**/*.d.ts",
     "skills/**/*",
     "cordis.patch.yml",
     "README.md",
-    "使用说明.md",
-    "窗口1-作业批改工作台.html",
-    "hwgrade-relay.cjs",
-    "hwgrade-ocr.py"
+    "使用说明.md"
   ],
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
     }
   },
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/build-client.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepack": "npm run build",
+    "pack:check": "npm pack --dry-run"
+  },
   "keywords": ["dsh", "deepseek-harness", "dsh-plugin", "homework", "grading", "vision-model"],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@deepseek-ai/cordis": "~4.0.4"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "~4.0.4",
+    "@deepseek-ai/dsh-client-ui-layout": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-renderer": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-sidebar": "0.2.0-rc.2",
+    "@deepseek-ai/dsh-client-ui-slots": "0.2.0-rc.2",
+    "@types/node": "^24.0.0",
+    "@types/react": "18.3.28",
+    "react": "18.3.1",
+    "typescript": "^5.9.3"
+  }
 }
