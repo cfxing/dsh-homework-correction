@@ -1,0 +1,383 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>原题 · 集合中的“乘积 = 和”（窗口2）</title>
+  <link rel="stylesheet" href="/api/worktable/template/dshell.css" />
+  <style>
+    /* —— 最小自造样式：原题槽位 / 变式题卡片 —— */
+    .slot{margin-top:12px;border:1.5px dashed rgba(127,127,127,.45);border-radius:12px;min-height:280px;
+          display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(127,127,127,.05);
+          text-align:center;transition:border-color .15s ease,background .15s ease}
+    .slot:hover{border-color:rgba(120,140,255,.65);background:rgba(120,140,255,.06)}
+    .slot.has{border-style:solid;border-color:rgba(127,127,127,.25);padding:10px;background:rgba(127,127,127,.04)}
+    .slot img{max-width:100%;max-height:62vh;border-radius:8px;display:block;box-shadow:0 6px 24px rgba(0,0,0,.18);cursor:zoom-in}
+    .slotHint{max-width:520px}
+    .slotHint .big{font-size:15px;margin-bottom:6px}
+    .slotHint .small{font-size:12px;opacity:.75;line-height:1.7}
+    .slotIcon{font-size:34px;opacity:.55;margin-bottom:8px}
+    .varGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(272px,1fr));gap:12px;margin-top:12px}
+    .varCard{background:rgba(127,127,127,.07);border:1px solid rgba(127,127,127,.16);border-radius:10px;padding:10px 12px 12px}
+    .varCard h3{margin:0 0 8px;font-size:13.5px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .varField{margin-top:8px}
+    .varField .k{font-size:11px;opacity:.65;letter-spacing:.3px}
+    .varField .v{font-size:12.5px;line-height:1.6;opacity:.85;white-space:pre-wrap}
+    .ph{opacity:.42}
+    .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .row .spacer{flex:1}
+    /* 原题全屏查看层 */
+    .lb{position:fixed;inset:0;z-index:9999;background:rgba(8,11,22,.92);display:none;overflow:auto;padding:54px 20px 44px;text-align:center}
+    .lb.open{display:block}
+    /* 面板全屏（沉浸式）：只留原题图片，铺满窗口宽度 */
+    .lb.immersive{padding:0;background:#0a0d14}
+    .lb.immersive img{width:100%;max-width:none;border-radius:0}
+    .lb.immersive .lb-tip{position:fixed;left:0;right:0;bottom:0;margin:0;background:rgba(8,11,22,.82);padding:6px 12px;font-size:12px}
+    .lb img{width:min(96vw,1400px);height:auto;background:#fff;border-radius:6px;margin:0 auto;cursor:zoom-out}
+    .lb-x{position:fixed;top:12px;right:20px;font-size:26px;line-height:1;color:#fff;cursor:pointer;z-index:10001;user-select:none}
+    .lb-tip{margin:12px auto 0;color:#fff;font-size:13px;max-width:min(96vw,1400px);text-align:center;opacity:.85}
+    .panel{display:none}.panel.on{display:block}
+    .stepList{counter-reset:s;margin-top:10px}
+    .stepItem{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid rgba(127,127,127,.12)}
+    .stepItem:last-child{border-bottom:0}
+    .stepNo{flex:0 0 22px;height:22px;line-height:22px;text-align:center;border-radius:50%;
+            background:rgba(120,140,255,.18);font-size:11.5px;font-weight:600}
+    .stepTx{font-size:12.5px;line-height:1.6}
+    .stepTx .t{font-weight:600;display:block;margin-bottom:2px}
+    code.k{font-size:11.5px;padding:1px 6px;border-radius:5px;background:rgba(127,127,127,.16)}
+  </style>
+</head>
+<body>
+  <div class="dshell">
+    <!-- 标题区 -->
+    <h1 class="dshell-title">原题：集合中的“乘积 = 和”（n ≥ 2，正数）</h1>
+    <p class="dshell-sub">项目「举一反三」窗口2：这道题的原图与分析入口。知识点与解题方法见窗口3，同源变式试卷见窗口1。</p>
+
+    <!-- 状态徽标 -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px">
+      <span class="dshell-badge" id="bdWin">窗口2 · 举一反三</span>
+      <span class="dshell-badge" id="bdProb">原题：等待图片</span>
+      <span class="dshell-badge" id="bdKnow">知识点：已分析（窗口3）</span>
+      <span class="dshell-badge" id="bdVar">变式题：已生成（窗口1）</span>
+      <span class="dshell-badge dshell-badgeDone" id="bdOK" style="display:none">原题已就位</span>
+      <span class="dshell-badge dshell-badgeDone" id="bdAuto">自动刷新：开</span>
+    </div>
+
+    <!-- 统计 -->
+    <div class="dshell-grid">
+      <div class="dshell-stat"><div class="dshell-statLabel">原题</div><div class="dshell-statValue" id="sProb">0</div></div>
+      <div class="dshell-stat"><div class="dshell-statLabel">知识点</div><div class="dshell-statValue" id="sKnow">7</div></div>
+      <div class="dshell-stat"><div class="dshell-statLabel">解题方法</div><div class="dshell-statValue" id="sMethod">5</div></div>
+      <div class="dshell-stat"><div class="dshell-statLabel">变式题</div><div class="dshell-statValue" id="sVar">8 / 8</div></div>
+    </div>
+
+    <!-- 标签页 -->
+    <div class="dshell-tabs" style="margin-top:14px">
+      <button class="dshell-tab dshell-tabOn" data-panel="pProb">📌 原题</button>
+      <button class="dshell-tab" data-panel="pKnow">🧠 知识点与解题方法</button>
+      <button class="dshell-tab" data-panel="pVar">🔁 举一反三变式题</button>
+      <button class="dshell-tab" data-panel="pHow">ℹ 使用说明</button>
+    </div>
+
+    <!-- ============ 原题 ============ -->
+    <div class="panel on" id="pProb">
+      <div class="row" style="margin-top:12px">
+        <button class="dshell-btn" id="btnReload">↻ 重新载入原题</button>
+        <span class="dshell-muted" id="stFile">正在检查原题图片…</span>
+        <div class="spacer"></div>
+        <span class="dshell-muted">识别到的图片会自动占据下方这块位置，<strong>双击图片可全屏查看</strong></span>
+      </div>
+
+      <div class="slot" id="slot">
+        <img id="probImg" alt="原题" style="display:none" />
+        <div class="slotHint" id="slotHint">
+          <div class="slotIcon">🖼</div>
+          <div class="big">原题位置 —— 目前为空</div>
+          <div class="small">
+            把题目图片发到对话里，我会把它保存到项目文件夹并贴在<strong>这个位置</strong>，<br />
+            同时把窗口名改成题目名称，再在右侧两个标签页里填好知识点、解题方法和三道变式题。
+          </div>
+          <div class="small" style="margin-top:10px">
+            预期文件：<code class="k">举一反三-原题.png</code>
+          </div>
+        </div>
+      </div>
+
+      <div class="dshell-card" style="margin-top:14px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">题目档案</h2>
+        <div class="dshell-kv">
+          <div class="dshell-kvRow"><span class="dshell-kvKey">题目名称</span><span class="dshell-kvValue" id="kvName">5. 已知 F₁, F₂ 是椭圆 C: x²/9 + y²/4 = 1 的两个焦点，点 M 在 C 上，则 |MF₁|·|MF₂| 的最大值为（　　）</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">学科 / 年级</span><span class="dshell-kvValue" id="kvSubj">高中数学 · 解析几何（圆锥曲线 · 椭圆的定义与焦半径）</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">题型</span><span class="dshell-kvValue" id="kvType">单项选择题（最值问题）</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">难度</span><span class="dshell-kvValue" id="kvLevel">中等（定义 + 基本不等式两步到位；易错在 a、b、c 混淆与忘记验证取等位置）</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">题干原文</span><span class="dshell-kvValue" id="kvRaw">5. 已知 F₁, F₂ 是椭圆 C: x²/9 + y²/4 = 1 的两个焦点，点 M 在 C 上，则 |MF₁|·|MF₂| 的最大值为（　　）<br />A. 13　　B. 12　　C. 9　　D. 6</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">题干要点</span><span class="dshell-kvValue" id="kvCond">已知：椭圆 x²/9 + y²/4 = 1（a = 3, b = 2, c = √5）、两焦点 F₁, F₂、M 在椭圆上；所求：<strong>|MF₁|·|MF₂| 的最大值</strong>（两焦半径之<strong>积</strong>）。<br />关键：椭圆定义给出 |MF₁| + |MF₂| = 2a = 6 是<strong>定值</strong>，和为定值求积的最大值 ⇒ 均值不等式 mn ≤ ((m+n)/2)² = 9；等号在 |MF₁| = |MF₂| = 3（M 为短轴端点 (0, ±2)）时取到。<br />易错：A 项 13 = a² + b²、B 项 12 = 2ab、D 项 6 = 2a，分别对应"a、b 混算""错用 2ab""把和当积"三类典型错误。<br />（识图备注：图中 |MF₁| 与 |MF₂| 之间是<strong>乘点「·」</strong>，已按像素核对，不是减号。）</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">正确答案</span><span class="dshell-kvValue" id="kvAns"><strong>C（9）</strong>—— |MF₁|·|MF₂| ≤ a² = 9，当 M 在短轴端点 (0, ±2) 时取等；详见窗口3</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 知识点与解题方法 ============ -->
+    <div class="panel" id="pKnow">
+      <div class="dshell-card" style="margin-top:12px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">核心知识点</h2>
+        <div class="dshell-list" id="listKnow">
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">椭圆定义：M 在椭圆上 ⇒ |MF₁| + |MF₂| = 2a = 6（本题的“和为定值”）</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">a、b、c 关系：x²/9 + y²/4 = 1 ⇒ a = 3, b = 2, c = √5，|F₁F₂| = 2c = 2√5</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">基本不等式：mn ≤ ((m+n)/2)² ⇒ |MF₁|·|MF₂| ≤ a² = 9（本题主方法）</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">取等位置：|MF₁| = |MF₂| = a = 3 时 M 在短轴端点 (0, ±2)，等号确实能取到</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">焦半径范围与配方视角：|MF₁| ∈ [3−√5, 3+√5]，设 |MF₁| = 3+t ⇒ 积 = 9 − t² ∈ [4, 9]</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">焦点三角形：|F₁F₂| = 2c，面积 = ½·2c·|y_M|，配合余弦定理可互求积、夹角、面积、平方和</span></div>
+        </div>
+      </div>
+
+      <div class="dshell-card" style="margin-top:12px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">解题方法与步骤</h2>
+        <div class="stepList" id="listSteps">
+          <div class="stepItem"><div class="stepNo">1</div><div class="stepTx"><span class="t">审题：先读出 a、b、c</span><span>由 x²/9 + y²/4 = 1 得 a = 3、b = 2、c = √5（a² = b² + c²），|F₁F₂| = 2√5；M 在椭圆上 ⇒ |MF₁| + |MF₂| = 2a = 6</span></div></div>
+          <div class="stepItem"><div class="stepNo">2</div><div class="stepTx"><span class="t">转化：和为定值求积</span><span>记 m = |MF₁|、n = |MF₂|，问题化为"m + n = 6 时 mn 的最大值"，即均值不等式的标准场景</span></div></div>
+          <div class="stepItem"><div class="stepNo">3</div><div class="stepTx"><span class="t">求解：均值不等式</span><span>mn ≤ ((m + n)/2)² = (6/2)² = 9</span></div></div>
+          <div class="stepItem"><div class="stepNo">4</div><div class="stepTx"><span class="t">检验取等并对照干扰项</span><span>等号要求 m = n = 3：取 M(0, ±2)，此时 |MF₁| = |MF₂| = √(5 + 4) = 3 ✓；干扰项 13 = a² + b²、12 = 2ab、6 = 2a ⇒ 选 <strong>C</strong></span></div></div>
+        </div>
+        <div class="dshell-divider"></div>
+        <div class="dshell-kv">
+          <div class="dshell-kvRow"><span class="dshell-kvKey">方法名称</span><span class="dshell-kvValue">椭圆定义 + 均值不等式（配焦半径参数化、余弦定理）</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">适用条件</span><span class="dshell-kvValue">椭圆上一点到两焦点的距离之积 / 平方和 / 夹角 / 焦点三角形面积的最值问题；核心是"两焦半径之和恒为 2a"这个定值</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">易错提醒</span><span class="dshell-kvValue">① 关系式记错：本题是 a² = b² + c² ⇒ c = √5（不是 c² = a² + b²）；② 用完均值不等式不验证等号，漏掉"M 在短轴端点"这一位置；③ 把 |MF₁|·|MF₂| 与 |MF₁| + |MF₂| 混为一谈（后者恒为 2a，是定值不是最值）；④ 干扰项 13 = a² + b²、12 = 2ab、6 = 2a，全都来自 a、b、c 混用</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 变式题 ============ -->
+    <div class="panel" id="pVar">
+      <div class="row" style="margin-top:12px">
+        <span class="dshell-muted">三道变式题与原题同源：同知识点、同方法，条件或问法各换一个角度。完整题目与答案见窗口1 的试卷图片（共 8 题）。</span>
+      </div>
+
+      <div class="varGrid">
+        <div class="varCard">
+          <h3><span>变式一 · 换数字/换情境</span><span class="dshell-badge dshell-badgeDone" data-vb="1">已生成</span></h3>
+          <div class="varField"><div class="k">题目</div><div class="v">已知 F₁, F₂ 是椭圆 x²/25 + y²/16 = 1 的两个焦点，点 M 在椭圆上，求 |MF₁|·|MF₂| 的最大值。</div></div>
+          <div class="varField"><div class="k">考查点</div><div class="v">椭圆定义（两焦半径之和 = 2a）+ 均值不等式（a 变大，答案随之变为 a²）</div></div>
+          <div class="varField"><div class="k">解题要点</div><div class="v">a = 5 ⇒ |MF₁| + |MF₂| = 10 ⇒ 积 ≤ (10/2)² = 25；等号在 |MF₁| = |MF₂| = 5，即 M 为短轴端点 (0, ±4)</div></div>
+          <div class="varField"><div class="k">答案</div><div class="v">25（= a²）</div></div>
+        </div>
+        <div class="varCard">
+          <h3><span>变式二 · 逆向/条件互换</span><span class="dshell-badge dshell-badgeDone" data-vb="2">已生成</span></h3>
+          <div class="varField"><div class="k">题目</div><div class="v">已知 F₁, F₂ 是椭圆 x²/9 + y²/4 = 1 的两个焦点，点 M 在椭圆上，求 |MF₁| − |MF₂| 的最大值。</div></div>
+          <div class="varField"><div class="k">考查点</div><div class="v">三角不等式 |MF₁| − |MF₂| ≤ |F₁F₂| = 2c；与“积的最大值”作对照</div></div>
+          <div class="varField"><div class="k">解题要点</div><div class="v">差的绝对值不超过焦距 2c = 2√5；M 在长轴端点 (3, 0) 时取到（此时 |MF₁| = 3 + √5、|MF₂| = 3 − √5）</div></div>
+          <div class="varField"><div class="k">答案</div><div class="v">2√5（注意：积最大在短轴端点，差最大在长轴端点）</div></div>
+        </div>
+        <div class="varCard">
+          <h3><span>变式三 · 综合/拔高</span><span class="dshell-badge dshell-badgeDone" data-vb="3">已生成</span></h3>
+          <div class="varField"><div class="k">题目</div><div class="v">已知 F₁, F₂ 是椭圆 x²/9 + y²/4 = 1 的焦点，M 在椭圆上。(1) 若 ∠F₁MF₂ = 90°，求 |MF₁|·|MF₂|；(2) 若 |MF₁|·|MF₂| = 8，求 △MF₁F₂ 的面积。</div></div>
+          <div class="varField"><div class="k">考查点</div><div class="v">焦点三角形：定义 m + n = 2a 与余弦定理 / 勾股定理联立（两问互为逆命题）</div></div>
+          <div class="varField"><div class="k">解题要点</div><div class="v">(1) m + n = 6，m² + n² = |F₁F₂|² = 4c² = 20 ⇒ mn = (36 − 20)/2 = 8；(2) 由 mn = 8、m + n = 6 得 m² + n² = 20 = 4c² ⇒ ∠F₁MF₂ = 90°，S = ½mn = 4</div></div>
+          <div class="varField"><div class="k">答案</div><div class="v">(1) |MF₁|·|MF₂| = 8；(2) △MF₁F₂ 的面积 = 4</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 使用说明 ============ -->
+    <div class="panel" id="pHow">
+      <div class="dshell-card" style="margin-top:12px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">这个窗口怎么用</h2>
+        <div class="dshell-list">
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">① 在对话里发一张原题图片（拍照或截图都可以）</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">② 原题已识别并归档到本页的图片位置与题目档案</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">③ 知识点与解题方法已填到「知识点与解题方法」页（详细版见窗口3）</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">④ 三道变式题已生成，完整 8 题试卷见窗口1（图片可双击全屏）</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">⑤ 换题方式：直接发新的题目图片，我会覆盖旧图并重做分析、变式与试卷</span></div>
+        </div>
+        <div class="dshell-divider"></div>
+        <div class="dshell-kv">
+          <div class="dshell-kvRow"><span class="dshell-kvKey">原题图片命名</span><span class="dshell-kvValue">举一反三-原题.png（放在项目文件夹，本页自动读取）</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">本页状态</span><span class="dshell-kvValue">原题已就位（举一反三-原题.png），分析与变式已同步到窗口3 / 窗口1</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">自动刷新</span><span class="dshell-kvValue">已开启：每 4 秒检查一次刷新标记（举一反三-刷新标记.json）并比对本页内容，原题归档或页面更新后本窗自动重载；切回本窗时立即检查一次</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">全屏看原题</span><span class="dshell-kvValue">双击原题图片 → 面板全屏（图片铺满窗口宽度，不调用浏览器全屏，不会被自动踢出）；再双击或按 Esc 退出。想要浏览器级全屏可按 F11</span></div>
+        </div>
+        <div style="margin-top:12px"><button class="dshell-btn dshell-btnGhost" id="btnReload2">↻ 重新检查原题图片</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 原题全屏查看层（双击原题图片打开） -->
+  <div class="lb" id="lb">
+    <div class="lb-x" id="lbX">✕</div>
+    <button class="dshell-btn" id="lbFs" style="position:fixed;top:12px;left:20px;z-index:10001">⛶ 面板全屏 / 退出</button>
+    <img id="lbImg" alt="原题" />
+    <div class="lb-tip">双击图片切换面板全屏　｜　Esc 或点空白处关闭</div>
+  </div>
+
+  <script>
+    (function () {
+      var CANDS = ['举一反三-原题.png', '举一反三-原题.jpg', '举一反三-原题.jpeg', '举一反三-原题.webp'];
+      var img = document.getElementById('probImg');
+      var slot = document.getElementById('slot');
+      var hint = document.getElementById('slotHint');
+      var stFile = document.getElementById('stFile');
+
+      // 标签页
+      var tabs = document.querySelectorAll('.dshell-tab');
+      for (var i = 0; i < tabs.length; i++) {
+        tabs[i].addEventListener('click', function () {
+          for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove('dshell-tabOn');
+          this.classList.add('dshell-tabOn');
+          var ps = document.querySelectorAll('.panel');
+          for (var k = 0; k < ps.length; k++) ps[k].classList.remove('on');
+          var t = document.getElementById(this.getAttribute('data-panel'));
+          if (t) t.classList.add('on');
+        });
+      }
+
+      function found(name) {
+        img.style.display = 'block';
+        hint.style.display = 'none';
+        slot.classList.add('has');
+        stFile.textContent = '已载入原题：' + name;
+        document.getElementById('bdProb').textContent = '原题：已就位';
+        document.getElementById('bdProb').className = 'dshell-badge dshell-badgeDone';
+        document.getElementById('bdOK').style.display = '';
+        document.getElementById('sProb').textContent = '1';
+      }
+
+      function tryNext(idx) {
+        if (idx >= CANDS.length) {
+          img.style.display = 'none';
+          hint.style.display = '';
+          slot.classList.remove('has');
+          stFile.textContent = '暂未发现原题图片，等待你发送原题';
+          document.getElementById('bdProb').textContent = '原题：等待图片';
+          document.getElementById('bdProb').className = 'dshell-badge dshell-badgeWait';
+          document.getElementById('bdOK').style.display = 'none';
+          document.getElementById('sProb').textContent = '0';
+          return;
+        }
+        var n = CANDS[idx];
+        var probe = new Image();
+        probe.onload = function () { img.src = probe.src; found(n); };
+        probe.onerror = function () { tryNext(idx + 1); };
+        probe.src = encodeURI(n) + '?t=' + Date.now();
+      }
+
+      function reload() {
+        stFile.textContent = '正在检查原题图片…';
+        setTimeout(function () { tryNext(0); }, 30);
+      }
+
+      document.getElementById('btnReload').addEventListener('click', reload);
+      document.getElementById('btnReload2').addEventListener('click', reload);
+      reload();
+
+      /* ===== 双击原题图片：全屏查看 ===== */
+      var lb = document.getElementById('lb'), lbImg = document.getElementById('lbImg');
+      function fsOn(el, onFail) {
+        var f = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+        if (!f) { if (onFail) onFail(); return; }
+        try {
+          var p = f.call(el);
+          if (p && p.catch) p.catch(function () { if (onFail) onFail(); });
+        } catch (e) { if (onFail) onFail(); }
+      }
+      function fsOff() {
+        var d = document, f = d.exitFullscreen || d.webkitExitFullscreen || d.msExitFullscreen;
+        if (f && (d.fullscreenElement || d.webkitFullscreenElement)) { try { f.call(d); } catch (e) {} }
+      }
+      var lbOpenedAt = 0;
+      var lbTip = document.querySelector('.lb-tip');
+      window.__viewerOpen = false;
+      function lbTipText(extra) {
+        lbTip.textContent = '双击图片切换面板全屏　｜　Esc 或点空白处关闭' + (extra ? '　｜　' + extra : '');
+      }
+      function lbToggleFs() {
+        // 只做「面板内全屏」：不调用浏览器全屏 API，避免整个浏览器被放大后又被踢出来
+        var on = lb.classList.toggle('immersive');
+        lbTipText(on ? '已进入面板全屏：再点一次按钮或双击图片即可退出（想要浏览器级全屏可按 F11）' : '');
+      }
+      function lbClose(force) {
+        // 500ms 保护：双击的第二下会落在图层空白处，不能让它把刚打开的图层关掉
+        if (!force && Date.now() - lbOpenedAt < 500) return;
+        lb.classList.remove('open');
+        lb.classList.remove('immersive');
+        fsOff();
+        window.__viewerOpen = false;
+        if (window.__viewerResume) window.__viewerResume();  // 关闭后立刻补一次刷新检查
+      }
+      img.addEventListener('dblclick', function (e) {
+        e.stopPropagation();
+        if (!img.getAttribute('src')) return;
+        lbImg.src = img.getAttribute('src');
+        lbTipText('');
+        lb.classList.add('open');
+        lbOpenedAt = Date.now();
+        window.__viewerOpen = true;                      // 查看期间暂停自动刷新
+        if (window.__viewerPause) window.__viewerPause();
+        lbToggleFs();
+      });
+      lbImg.addEventListener('dblclick', function (e) { e.stopPropagation(); lbToggleFs(); });
+      lb.addEventListener('click', function (e) {
+        if (e.target.id !== 'lb') return;
+        if (e.detail > 1) return;
+        lbClose(false);
+      });
+      document.getElementById('lbX').addEventListener('click', function () { lbClose(true); });
+      document.getElementById('lbFs').addEventListener('click', function (e) { e.stopPropagation(); lbToggleFs(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') lbClose(false); });
+      /* 退出全屏时不自动关闭图层：避免"刚放大就被退出"的错觉 */
+
+      /* ===== 自动刷新：原题归档 / 本页更新后，窗口自动刷新 ===== */
+      (function () {
+        var MARK = '举一反三-刷新标记.json';
+        var SELF = '窗口2-举一反三原题画板.html';
+        var KEY = '窗口2';
+        var badge = document.getElementById('bdAuto');
+        var baseRev = null, selfHash = null, paused = false;
+        function hash(s) { var h = 5381, i = s.length; while (i) { h = (h * 33 ^ s.charCodeAt(--i)) >>> 0; } return h; }
+        function lbl(t, ok) { if (badge) { badge.textContent = t; badge.className = 'dshell-badge ' + (ok ? 'dshell-badgeDone' : 'dshell-badgeWait'); } }
+        function checkSelf() {
+          return fetch('/api/worktable/site/' + encodeURI(SELF) + '?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.text() : null; })
+            .then(function (txt) {
+              if (txt == null) return false;
+              var h = hash(txt);
+              if (selfHash === null) { selfHash = h; return false; }
+              return h !== selfHash;
+            })
+            .catch(function () { return false; });
+        }
+        function tick() {
+          if (paused) return;
+          if (window.__viewerOpen) {   // 正在看原题大图：先不刷新，关闭后自动补查一次
+            lbl('自动刷新：暂停（查看大图）', false);
+            return;
+          }
+          fetch('/api/worktable/site/' + encodeURI(MARK) + '?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) {
+              var rev = null;
+              if (j) {
+                var w = (j.windows || {})[KEY] || {};
+                rev = String(w.rev != null ? w.rev : j.rev);
+              }
+              lbl('自动刷新：开' + (rev ? ' · rev ' + rev : ''), true);
+              if (rev !== null) {
+                if (baseRev === null) baseRev = rev;
+                else if (rev !== baseRev) { location.reload(); return null; }
+              }
+              return checkSelf();
+            })
+            .then(function (changed) { if (changed) location.reload(); })
+            .catch(function () { lbl('自动刷新：连接失败', false); });
+        }
+        window.__viewerPause = function () { lbl('自动刷新：暂停（查看大图）', false); };
+        window.__viewerResume = function () { if (!paused) tick(); };
+        setInterval(tick, 4000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden && !paused) tick(); });
+        window.addEventListener('focus', function () { if (!paused) tick(); });
+        tick();
+      })();
+    })();
+  </script>
+</body>
+</html>

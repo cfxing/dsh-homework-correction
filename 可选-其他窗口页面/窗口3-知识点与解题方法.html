@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>知识点 · 解题思路 · 解题方法：集合中的“乘积 = 和”（窗口3）</title>
+  <link rel="stylesheet" href="/api/worktable/template/dshell.css" />
+  <style>
+    /* —— 最小自造样式 —— */
+    .panel{display:none}.panel.on{display:block}
+    .ph{opacity:.42}
+    .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .row .spacer{flex:1}
+    .mGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(258px,1fr));gap:12px;margin-top:12px}
+    .mCard{background:rgba(127,127,127,.07);border:1px solid rgba(127,127,127,.16);border-radius:10px;padding:10px 12px 12px}
+    .mCard h3{margin:0 0 6px;font-size:13.5px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+    .mCard .line{font-size:12.5px;line-height:1.65;margin-top:6px}
+    .mCard .k{font-size:11px;opacity:.65;display:block;margin-bottom:2px}
+    .flow{display:flex;flex-direction:column;gap:0;margin-top:12px}
+    .flowItem{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(127,127,127,.12)}
+    .flowItem:last-child{border-bottom:0}
+    .flowNo{flex:0 0 26px;height:26px;line-height:26px;text-align:center;border-radius:50%;
+             background:rgba(120,140,255,.18);font-size:12px;font-weight:600}
+    .flowTx{font-size:12.5px;line-height:1.65}
+    .flowTx .t{font-weight:600;display:block;margin-bottom:3px}
+    .flowTx .why{opacity:.72}
+    .chain{font-size:12.5px;line-height:1.9;word-break:break-word}
+    code.k{font-size:11.5px;padding:1px 6px;border-radius:5px;background:rgba(127,127,127,.16)}
+    .tagRow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+    .tag{font-size:11px;padding:1px 8px;border-radius:20px;background:rgba(127,127,127,.14)}
+  </style>
+</head>
+<body>
+  <div class="dshell">
+    <!-- 标题区 -->
+    <h1 class="dshell-title">知识点 · 解题思路 · 解题方法</h1>
+    <p class="dshell-sub">项目「举一反三」窗口3：原题「椭圆 C: x²/9 + y²/4 = 1 上一点 M 到两焦点距离之积 |MF₁|·|MF₂| 的最大值」的知识点、思路链条与解题方法。</p>
+
+    <!-- 状态徽标 -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px">
+      <span class="dshell-badge" id="bdWin">窗口3 · 举一反三</span>
+      <span class="dshell-badge dshell-badgeDone">通用解题框架：已就位</span>
+      <span class="dshell-badge dshell-badgeDone" id="bdKnow">知识点：已录入 7 条</span>
+      <span class="dshell-badge dshell-badgeDone" id="bdMethod">本题方法：已录入 5 种</span>
+      <span class="dshell-badge dshell-badgeDone">正确答案：C（9）</span>
+      <span class="dshell-badge dshell-badgeDone" id="bdAuto">自动刷新：开</span>
+    </div>
+
+    <!-- 统计 -->
+    <div class="dshell-grid">
+      <div class="dshell-stat"><div class="dshell-statLabel">知识点</div><div class="dshell-statValue" id="sKnow">7</div><div class="dshell-statDelta">含 3 条前置知识</div></div>
+      <div class="dshell-stat"><div class="dshell-statLabel">解题方法</div><div class="dshell-statValue" id="sMethod">5</div><div class="dshell-statDelta">主方法 2 + 备选 3</div></div>
+      <div class="dshell-stat"><div class="dshell-statLabel">通用思路步骤</div><div class="dshell-statValue">5</div><div class="dshell-statDelta">已就位</div></div>
+      <div class="dshell-stat"><div class="dshell-statLabel">配套练习题</div><div class="dshell-statValue">8 题</div><div class="dshell-statDelta">见窗口1 试卷</div></div>
+    </div>
+
+    <!-- 标签页 -->
+    <div class="dshell-tabs" style="margin-top:14px">
+      <button class="dshell-tab dshell-tabOn" data-panel="pKnow">🧠 知识点清单</button>
+      <button class="dshell-tab" data-panel="pIdea">🧭 解题思路</button>
+      <button class="dshell-tab" data-panel="pMethod">🛠 解题方法库</button>
+      <button class="dshell-tab" data-panel="pHow">ℹ 使用说明</button>
+    </div>
+
+    <!-- ============ 知识点清单 ============ -->
+    <div class="panel on" id="pKnow">
+      <div class="dshell-card" style="margin-top:12px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">本题知识点</h2>
+        <table class="dshell-table">
+          <thead>
+            <tr><th style="width:26%">知识点</th><th style="width:18%">所属章节</th><th style="width:32%">在本题中的考查方式</th><th>掌握要求</th></tr>
+          </thead>
+          <tbody id="tbKnow">
+            <tr><td><strong>椭圆的定义（第一定义）</strong><br />M 在椭圆上 ⟺ |MF₁| + |MF₂| = 2a</td><td>选择性必修一 · 圆锥曲线</td><td><strong>本题第一步</strong>：把两个焦半径之和固定成定值 2a = 6，为"和为定值求积"铺路</td><td>必须熟练</td></tr>
+            <tr><td>椭圆中 a、b、c 的关系<br />a² = b² + c²</td><td>椭圆的标准方程</td><td>由 x²/9 + y²/4 = 1 得 a = 3、b = 2、c = √5，焦距 |F₁F₂| = 2c = 2√5</td><td>熟练（本题易错点）</td></tr>
+            <tr><td><strong>基本不等式（均值不等式）</strong><br />mn ≤ ((m+n)/2)²</td><td>必修一 · 基本不等式</td><td><strong>本题主方法</strong>：|MF₁|·|MF₂| ≤ ((2a)/2)² = a² = 9，直接得到最大值</td><td>熟练</td></tr>
+            <tr><td>取等条件与几何位置</td><td>圆锥曲线 · 焦半径</td><td>等号要求 |MF₁| = |MF₂| = a = 3，此时 M 在短轴端点 (0, ±2)（此时 √(c² + b²) = √9 = 3 ✓）</td><td>会用（必须验证）</td></tr>
+            <tr><td>焦半径的范围与配方视角<br />|MF₁| ∈ [a − c, a + c]</td><td>解析几何 · 焦半径</td><td>设 |MF₁| = 3 + t 则 |MF₂| = 3 − t，积 = 9 − t² ∈ [b², a²] = [4, 9]（t = 0 最大、|t| = c 最小）</td><td>会用（秒杀技巧）</td></tr>
+            <tr><td>焦点三角形的性质<br />|F₁F₂| = 2c，面积 = ½·2c·|y_M|</td><td>解析几何 · 焦点三角形</td><td>变式与综合题里"乘积 ↔ 夹角 ↔ 面积 ↔ 平方和"的相互转化全靠 m + n = 2a 与余弦定理</td><td>会用（变式核心）</td></tr>
+            <tr><td>干扰项识别<br />13 = a² + b²，12 = 2ab，6 = 2a</td><td>应试策略（非教材条目）</td><td>三个错误选项正好对应"a、b 混算""错用 2ab""把 2a 当成积"三类典型错误，能反推考点</td><td>理解出题意图</td></tr>
+          </tbody>
+        </table>
+        <p class="dshell-muted" style="margin:10px 0 0">一句话脉络：<strong>椭圆定义给出"焦半径之和 = 2a"⇒ 和为定值求积的最大值 ⇒ 均值不等式得 a² = 9 ⇒ 验证等号在短轴端点能取到</strong>。记住三个"最值"的位置：积最大 a²（短轴端点）、差最大 2c（长轴端点）、焦半径范围 [a−c, a+c]。</p>
+      </div>
+
+      <div class="dshell-card" style="margin-top:12px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">知识点是这样拆出来的</h2>
+        <div class="dshell-list">
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">① 看题干符号：写成 A = {a₁, …, aₙ} 且下标到 n ⇒ 元素两两不同（第一条前置知识）</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">② 看选项分层：A、B 是 n = 2，C 是 n = 3，D 是 ∀n ≥ 4 ⇒ 必须按 n 分类讨论</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">③ 看等式类型：乘积 = 和 ⇒ 小 n 可直接解，大 n 只能用不等式放缩</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">④ 看"存在 / 至多 / 有且只有"等措辞 ⇒ 分别对应构造、上界估计、唯一性证明三种任务</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 解题思路 ============ -->
+    <div class="panel" id="pIdea">
+      <div class="dshell-card" style="margin-top:12px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">通用解题思路（五步，任何题都能套）</h2>
+        <div class="flow">
+          <div class="flowItem"><div class="flowNo">1</div><div class="flowTx"><span class="t">审题：圈条件、标所求</span><span class="why">抓住"椭圆方程""M 在椭圆上""求两焦半径之积的最大值"三件事，先把 a、b、c 与焦距写出来。</span></div></div>
+          <div class="flowItem"><div class="flowNo">2</div><div class="flowTx"><span class="t">转化：把文字变成式子或图形</span><span class="why">记 m = |MF₁|、n = |MF₂|，由定义得 m + n = 2a（定值），把几何问题变成"和为定值求积的最大值"的代数问题。</span></div></div>
+          <div class="flowItem"><div class="flowNo">3</div><div class="flowTx"><span class="t">定法：选模型与方法</span><span class="why">和为定值求积 ⇒ 均值不等式；涉及夹角或面积 ⇒ 余弦定理 + 焦点三角形；要把距离与坐标挂钩 ⇒ 焦半径公式 r = a ± ex。</span></div></div>
+          <div class="flowItem"><div class="flowNo">4</div><div class="flowTx"><span class="t">求解：规范书写、步步有据</span><span class="why">写出 a² = b² + c² 的取值依据；用不等式后必须单独说明等号能否取到（本题取 M 为短轴端点）。</span></div></div>
+          <div class="flowItem"><div class="flowNo">5</div><div class="flowTx"><span class="t">检验：回代与反思</span><span class="why">把 M(0, 2) 代回验证 |MF₁| = |MF₂| = 3；再检查是否与"差最大 2c""焦半径范围 [a−c, a+c]"等结论混淆。</span></div></div>
+        </div>
+      </div>
+
+      <div class="dshell-card" style="margin-top:12px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">本题思路链</h2>
+        <div class="chain">
+          椭圆 C: x²/9 + y²/4 = 1　→　a = 3, b = 2, c = √5（a² = b² + c²），|F₁F₂| = 2c = 2√5<br />
+          点 M 在 C 上　→　<strong>由椭圆定义：|MF₁| + |MF₂| = 2a = 6（定值）</strong><br />
+          求 |MF₁|·|MF₂| 的最大值　→　记 m = |MF₁|, n = |MF₂|，则 m + n = 6，由均值不等式 mn ≤ ((m + n)/2)² = 9<br />
+          验证等号：需 m = n = 3，此时 M 在短轴端点 (0, ±2)，而 √(c² + b²) = √(5 + 4) = 3 ✓，等号可以取到<br />
+          所以 |MF₁|·|MF₂| 的最大值为 <strong>9</strong>，选 <strong>C</strong>（干扰项 13 = a² + b²、12 = 2ab、6 = 2a）
+        </div>
+        <div class="dshell-divider"></div>
+        <div class="dshell-kv">
+          <div class="dshell-kvRow"><span class="dshell-kvKey">突破口</span><span class="dshell-kvValue">所求是两焦半径之<strong>积</strong>，而椭圆定义给出两焦半径之<strong>和</strong>为定值 2a —— “和为定值求积的最大值”就是均值不等式的标准场景</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">关键一步</span><span class="dshell-kvValue">|MF₁|·|MF₂| ≤ ((|MF₁| + |MF₂|)/2)² = ((2a)/2)² = a² = 9，并验证 |MF₁| = |MF₂| = a 确实能在短轴端点取到</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">为什么这样想</span><span class="dshell-kvValue">椭圆上任意一点到两焦点距离之和恒为 2a，这是椭圆题里最稳定的“定值”；只要题目出现 |MF₁|、|MF₂| 的和、积、平方和、夹角、焦点三角形面积，先把 m + n = 2a 写下来，再用均值不等式或余弦定理</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">同类题信号</span><span class="dshell-kvValue">“点 M 在椭圆上，求 |MF₁|·|MF₂| / |MF₁|² + |MF₂|² / ∠F₁MF₂ / △MF₁F₂ 面积” ⇒ 统一设 m = |MF₁|, n = |MF₂|，用 m + n = 2a、|F₁F₂| = 2c 搭配均值不等式或余弦定理</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">易混对照</span><span class="dshell-kvValue"><strong>积</strong>的最大值是 a²（M 在<strong>短轴</strong>端点，此时两焦半径相等）；<strong>差</strong>的最大值是 2c（M 在<strong>长轴</strong>端点）；两焦半径的取值范围是 [a − c, a + c] —— 三个结论的取等位置各不相同，别记混</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 解题方法库 ============ -->
+    <div class="panel" id="pMethod">
+      <div class="row" style="margin-top:12px">
+        <span class="dshell-muted">前两张是本题主方法；后面是通用方法工具箱（任何题都可能用到）。</span>
+      </div>
+
+      <div class="mGrid">
+        <div class="mCard" style="border-color:rgba(120,140,255,.55);background:rgba(120,140,255,.09)">
+          <h3><span>椭圆定义 + 均值不等式</span><span class="dshell-badge dshell-badgeDone" style="background:rgba(120,140,255,.2)">本题主方法</span></h3>
+          <div class="line"><span class="k">适用</span>求 |MF₁|·|MF₂| 的最大（小）值</div>
+          <div class="line"><span class="k">要点</span>m + n = 2a = 6 ⇒ mn ≤ ((m + n)/2)² = a² = 9；等号 m = n = a，此时 M 在短轴端点</div>
+        </div>
+        <div class="mCard" style="border-color:rgba(120,140,255,.55);background:rgba(120,140,255,.09)">
+          <h3><span>焦半径参数化（配方）</span><span class="dshell-badge dshell-badgeDone" style="background:rgba(120,140,255,.2)">本题用</span></h3>
+          <div class="line"><span class="k">适用</span>需要取值范围，或要说明取等位置</div>
+          <div class="line"><span class="k">要点</span>设 |MF₁| = a + t，则 |MF₂| = a − t（|t| ≤ c）⇒ mn = a² − t² ∈ [b², a²]，一眼看出两端点</div>
+        </div>
+        <div class="mCard">
+          <h3><span>椭圆定义（通用）</span><span class="dshell-badge dshell-badgeDone">通用</span></h3>
+          <div class="line"><span class="k">适用</span>一切涉及两焦半径的椭圆题</div>
+          <div class="line"><span class="k">要点</span>先把 m + n = 2a 写下来；焦点三角形周长 = 2a + 2c，这是最稳的“定值”</div>
+        </div>
+        <div class="mCard">
+          <h3><span>余弦定理 + 焦点三角形</span><span class="dshell-badge dshell-badgeDone">通用</span></h3>
+          <div class="line"><span class="k">适用</span>已知夹角、面积或平方和</div>
+          <div class="line"><span class="k">要点</span>|F₁F₂|² = m² + n² − 2mn·cosθ 与 m + n = 2a 联立；面积 = ½mn·sinθ = b²·tan(θ/2)</div>
+        </div>
+        <div class="mCard">
+          <h3><span>焦半径公式 r = a ± ex</span><span class="dshell-badge dshell-badgeDone">通用</span></h3>
+          <div class="line"><span class="k">适用</span>要把焦半径与坐标挂钩（求点坐标、面积）</div>
+          <div class="line"><span class="k">要点</span>e = c/a = √5/3 ⇒ mn = 9 − (5/9)x²；再由 x² = 9(1 − y²/4) 得 mn = 4 + (5/4)y²</div>
+        </div>
+        <div class="mCard">
+          <h3><span>最值位置对照</span><span class="dshell-badge dshell-badgeDone">提醒</span></h3>
+          <div class="line"><span class="k">适用</span>判断最值在长轴还是短轴端点</div>
+          <div class="line"><span class="k">要点</span>积最大 a²（短轴端点）｜差最大 2c（长轴端点）｜焦半径范围 [a − c, a + c]</div>
+        </div>
+      </div>
+
+      <div class="dshell-card" style="margin-top:14px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">本题所用方法</h2>
+        <table class="dshell-table">
+          <thead>
+            <tr><th style="width:22%">方法</th><th style="width:26%">适用条件</th><th style="width:30%">关键步骤</th><th>易错点</th></tr>
+          </thead>
+          <tbody id="tbMethod">
+            <tr><td><strong>椭圆定义 + 均值不等式</strong>（主方法）</td><td>求 |MF₁|·|MF₂| 的最大值</td><td>m + n = 2a = 6 ⇒ mn ≤ ((m + n)/2)² = 9，等号当 m = n = 3</td><td>不验证等号可取（须指出 M 在短轴端点）；把 2a 记成 a</td></tr>
+            <tr><td><strong>焦半径参数化（配方）</strong></td><td>要求取值范围或说明取等位置</td><td>设 |MF₁| = 3 + t，则 |MF₂| = 3 − t ⇒ mn = 9 − t²，t = 0 取最大、|t| = c 取最小</td><td>不写 t 的范围（|t| ≤ c = √5）就谈最值；误以为 t 可任意大</td></tr>
+            <tr><td><strong>焦半径公式 r = a ± ex</strong></td><td>要把焦半径与坐标挂钩（求 M 坐标、面积）</td><td>e = c/a = √5/3 ⇒ mn = 9 − (5/9)x²；再由 x² = 9(1 − y²/4) 得 mn = 4 + (5/4)y²</td><td>左右焦点与 ± 号对应错；把 e 算成 b/a</td></tr>
+            <tr><td><strong>余弦定理 + 焦点三角形</strong></td><td>已知夹角、面积或平方和</td><td>|F₁F₂|² = m² + n² − 2mn·cosθ，与 m + n = 2a 联立；面积 = ½mn·sinθ</td><td>把 2c 当成 c 用（本题 2c = 2√5）；面积漏乘 sinθ</td></tr>
+            <tr><td><strong>面积公式 S = c·|y_M|</strong></td><td>由面积反求位置，或由位置求面积</td><td>S = ½·2c·|y_M| = √5·|y_M|；反之由 S 定 |y_M| 再回代椭圆方程</td><td>忘记系数 ½；把 |y_M| 与 |x_M| 用混</td></tr>
+          </tbody>
+        </table>
+        <div class="tagRow">
+          <span class="tag">窗口2：原题图片</span>
+          <span class="tag">窗口3：知识点 + 思路 + 方法</span>
+          <span class="tag">窗口1：8 题同源试卷</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ 使用说明 ============ -->
+    <div class="panel" id="pHow">
+      <div class="dshell-card" style="margin-top:12px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">这个窗口怎么用</h2>
+        <div class="dshell-list">
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">① 窗口2 放原题图片，窗口3 放"为什么这么做"——知识点、思路、方法</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">② 原题已分析完毕，本页三张表：知识点清单 / 思路链 / 本题方法，均已按本题填好</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">③ 每个方法都写清「适用条件」，方便在别的题上直接匹配套用</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">④ 复习时先看本页的「通用五步」和「方法库」，再回窗口1 做 8 道同源变式题</span></div>
+        </div>
+        <div class="dshell-divider"></div>
+        <div class="dshell-kv">
+          <div class="dshell-kvRow"><span class="dshell-kvKey">当前状态</span><span class="dshell-kvValue">已完成：原题「椭圆上一点到两焦点距离之积的最大值」的知识点 7 条、方法 5 种、思路链 1 条；答案 <strong>C（9）</strong></span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">自动刷新</span><span class="dshell-kvValue">已开启：每 4 秒检查一次刷新标记（举一反三-刷新标记.json）并比对本页内容，原题分析完成后本窗自动重载；切回本窗时立即检查一次</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">更新方式</span><span class="dshell-kvValue">在对话里说"改成…"，我会直接改本页并自动刷新</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">产物文件</span><span class="dshell-kvValue"><code class="k">窗口3-知识点与解题方法.html</code></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var tabs = document.querySelectorAll('.dshell-tab');
+      for (var i = 0; i < tabs.length; i++) {
+        tabs[i].addEventListener('click', function () {
+          for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove('dshell-tabOn');
+          this.classList.add('dshell-tabOn');
+          var ps = document.querySelectorAll('.panel');
+          for (var k = 0; k < ps.length; k++) ps[k].classList.remove('on');
+          var t = document.getElementById(this.getAttribute('data-panel'));
+          if (t) t.classList.add('on');
+        });
+      }
+
+      /* ===== 自动刷新：原题分析 / 本页更新后，窗口自动刷新 ===== */
+      (function () {
+        var MARK = '举一反三-刷新标记.json';
+        var SELF = '窗口3-知识点与解题方法.html';
+        var KEY = '窗口3';
+        var badge = document.getElementById('bdAuto');
+        var baseRev = null, selfHash = null, paused = false;
+        function hash(s) { var h = 5381, i = s.length; while (i) { h = (h * 33 ^ s.charCodeAt(--i)) >>> 0; } return h; }
+        function lbl(t, ok) { if (badge) { badge.textContent = t; badge.className = 'dshell-badge ' + (ok ? 'dshell-badgeDone' : 'dshell-badgeWait'); } }
+        function checkSelf() {
+          return fetch('/api/worktable/site/' + encodeURI(SELF) + '?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.text() : null; })
+            .then(function (txt) {
+              if (txt == null) return false;
+              var h = hash(txt);
+              if (selfHash === null) { selfHash = h; return false; }
+              return h !== selfHash;
+            })
+            .catch(function () { return false; });
+        }
+        function tick() {
+          if (paused) return;
+          fetch('/api/worktable/site/' + encodeURI(MARK) + '?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) {
+              var rev = null;
+              if (j) {
+                var w = (j.windows || {})[KEY] || {};
+                rev = String(w.rev != null ? w.rev : j.rev);
+              }
+              lbl('自动刷新：开' + (rev ? ' · rev ' + rev : ''), true);
+              if (rev !== null) {
+                if (baseRev === null) baseRev = rev;
+                else if (rev !== baseRev) { location.reload(); return null; }
+              }
+              return checkSelf();
+            })
+            .then(function (changed) { if (changed) location.reload(); })
+            .catch(function () { lbl('自动刷新：连接失败', false); });
+        }
+        setInterval(tick, 4000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden && !paused) tick(); });
+        window.addEventListener('focus', function () { if (!paused) tick(); });
+        tick();
+      })();
+    })();
+  </script>
+</body>
+</html>

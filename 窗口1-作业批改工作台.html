@@ -1,0 +1,3158 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>窗口1 · 作业批改</title>
+  <link rel="stylesheet" href="/api/worktable/template/dshell.css" />
+  <style>
+    /* ── 明亮配色：覆盖工作台默认深色主题变量，只作用于本窗口 ── */
+    :root {
+      color-scheme: light;
+      --dsw-alias-bg-base: #f3f8fd;
+      --dsw-alias-label-primary: #16202e;
+      --dsw-alias-label-secondary: #5b6779;
+      --dsw-alias-label-tertiary: #8d99ab;
+      --dsw-alias-border-l1: #e4eaf3;
+      --dsw-alias-border-l2: #ced8e8;
+      --dsw-alias-fill-l1: #ffffff;
+      --dsw-alias-state-accent-primary: #2f6df6;
+      --hw-ok: #15803d;
+      --hw-bad: #d1242f;
+      --hw-warn: #b45309;
+      --hw-accent: #2f6df6;
+      --c-blue: #2f6df6;   --c-blue-bg: #eef4ff;   --c-blue-bd: #d7e4ff;
+      --c-green: #16a34a;  --c-green-bg: #eafaf1;  --c-green-bd: #c8ecd7;
+      --c-red: #dc2626;    --c-red-bg: #fdeeee;    --c-red-bd: #f6d4d6;
+      --c-amber: #d97706;  --c-amber-bg: #fff5e6;  --c-amber-bd: #f6e0b8;
+      --c-purple: #7c5cf0; --c-purple-bg: #f2eeff; --c-purple-bd: #ddd3ff;
+    }
+    body {
+      background:
+        radial-gradient(900px 320px at 6% -8%, #dbe9ff 0, rgba(219, 233, 255, 0) 62%),
+        radial-gradient(760px 300px at 100% -4%, #efe6ff 0, rgba(239, 230, 255, 0) 58%),
+        linear-gradient(180deg, #f4f8fe 0, #f7fafd 320px, #f7fafd 100%);
+    }
+    .dshell { gap: 10px; padding: 12px 14px; }
+    .dshell-card { background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 8px 22px -16px rgba(16, 24, 40, .22); }
+    .dshell-btn { background: linear-gradient(180deg, #41d16a, #26b04c); color: #06280f; box-shadow: 0 1px 2px rgba(16, 24, 40, .12); }
+    .dshell-btn:disabled { opacity: .6; }
+    .dshell-btnGhost { background: #fff; color: #4b5768; }
+    .dshell-btnGhost:hover { background: #f2f7ff; color: #16202e; }
+    .dshell-badge { background: #fff; }
+    .dshell-badgeDone { color: #15803d; border-color: rgba(21, 128, 61, .35); background: #eefaf2; }
+    .dshell-badgeWait { color: #b45309; border-color: rgba(180, 83, 9, .32); background: #fff8ec; }
+    .dshell-input, .dshell-textarea { background: #fff; }
+    .dshell-progress { background: #e8eef8; }
+    .dshell-progressBar { background: linear-gradient(90deg, #38cd63, #22a447); }
+    .dshell-divider { background: #e9eff7; }
+    ::-webkit-scrollbar-thumb { background: rgba(22, 32, 46, .18); }
+
+    /* ── 顶部渐变头图 ── */
+    .hero {
+      display: flex; align-items: center; gap: 12px; padding: 13px 16px; border-radius: 14px; color: #fff;
+      background: linear-gradient(118deg, #4f8ef7 0%, #7a5cf0 58%, #a855f7 100%);
+      box-shadow: 0 12px 26px -16px rgba(79, 142, 247, .85);
+    }
+    .heroIco { width: 38px; height: 38px; flex: none; border-radius: 12px; background: rgba(255, 255, 255, .22); display: flex; align-items: center; justify-content: center; font-size: 19px; }
+    .heroTitle { font-size: 15.5px; font-weight: 700; letter-spacing: .4px; }
+    .heroSub { font-size: 11.5px; opacity: .93; }
+    .hero .dshell-btnGhost { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .42); color: #fff; }
+    .hero .dshell-btnGhost:hover { background: rgba(255, 255, 255, .3); color: #fff; }
+
+    /* ── 三步流程条 ── */
+    .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+    .fs { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 10px; font-size: 12px; font-weight: 600; border: 1px solid transparent; }
+    .fs b { width: 18px; height: 18px; flex: none; border-radius: 50%; color: #fff; font-size: 11px; display: flex; align-items: center; justify-content: center; }
+    .fs.blue { background: var(--c-blue-bg); border-color: var(--c-blue-bd); color: #1d4ed8; } .fs.blue b { background: var(--c-blue); }
+    .fs.green { background: var(--c-green-bg); border-color: var(--c-green-bd); color: #12603a; } .fs.green b { background: var(--c-green); }
+    .fs.amber { background: var(--c-amber-bg); border-color: var(--c-amber-bd); color: #8a5a08; } .fs.amber b { background: var(--c-amber); }
+    .fs.purple { background: var(--c-purple-bg); border-color: var(--c-purple-bd); color: #5b3fd1; } .fs.purple b { background: var(--c-purple); }
+
+    /* ── 统计色块 ── */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(126px, 1fr)); gap: 8px; }
+    .st { display: flex; align-items: center; gap: 9px; padding: 9px 11px; border-radius: 12px; border: 1px solid; }
+    .st i { width: 30px; height: 30px; flex: none; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-style: normal; }
+    .st .l { font-size: 11px; opacity: .88; }
+    .st .v { font-size: 17px; font-weight: 700; line-height: 1.15; }
+    .st.blue { background: var(--c-blue-bg); border-color: var(--c-blue-bd); color: #1d4ed8; } .st.blue i { background: #dbe7ff; }
+    .st.green { background: var(--c-green-bg); border-color: var(--c-green-bd); color: #12603a; } .st.green i { background: #d5f2e1; }
+    .st.red { background: var(--c-red-bg); border-color: var(--c-red-bd); color: #a51c26; } .st.red i { background: #fbdcdc; }
+    .st.amber { background: var(--c-amber-bg); border-color: var(--c-amber-bd); color: #8a5a08; } .st.amber i { background: #fbe6c4; }
+    .st.purple { background: var(--c-purple-bg); border-color: var(--c-purple-bd); color: #5b3fd1; } .st.purple i { background: #e3dbff; }
+    .stWide { margin-top: 8px; padding: 9px 12px; border-radius: 12px; background: #fff; border: 1px solid var(--dsw-alias-border-l1); }
+
+    /* ── 区块标题 ── */
+    .secTitle { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 13.5px; font-weight: 700; color: #16202e; }
+    .secIco { width: 24px; height: 24px; flex: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #fff; }
+    .secIco.blue { background: linear-gradient(135deg, #5b9bff, #2f6df6); }
+    .secIco.amber { background: linear-gradient(135deg, #ffc061, #f59e0b); }
+    .secIco.purple { background: linear-gradient(135deg, #a78bfa, #7c5cf0); }
+    .secIco.green { background: linear-gradient(135deg, #55d67f, #16a34a); }
+
+    /* ── 小标签 ── */
+    .chip { display: inline-flex; align-items: center; gap: 4px; padding: 1px 9px; border-radius: 999px; font-size: 11px; background: #fff; border: 1px solid var(--dsw-alias-border-l1); color: #5b6779; }
+    .chip.blue { background: var(--c-blue-bg); border-color: var(--c-blue-bd); color: #1d4ed8; }
+    .chip.green { background: var(--c-green-bg); border-color: var(--c-green-bd); color: #12603a; }
+    .chip.amber { background: var(--c-amber-bg); border-color: var(--c-amber-bd); color: #8a5a08; }
+    .chip.red { background: var(--c-red-bg); border-color: var(--c-red-bd); color: #a51c26; }
+    .chip.purple { background: var(--c-purple-bg); border-color: var(--c-purple-bd); color: #5b3fd1; }
+
+    /* ── 采集区 / 缩略图 ── */
+    .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .hid { display: none !important; }
+    .grow { flex: 1 1 auto; min-width: 0; }
+    video { width: 100%; max-height: 340px; background: #0b1220; border-radius: 10px; display: block; }
+    .thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+    .thumb { position: relative; border: 1px solid var(--dsw-alias-border-l1); border-radius: 10px; overflow: hidden; background: #fff; box-shadow: 0 1px 2px rgba(16, 24, 40, .06); }
+    .thumb img { width: 100%; height: 96px; object-fit: cover; display: block; }
+    .thumbTag { position: absolute; left: 4px; top: 4px; padding: 1px 7px; border-radius: 999px; background: rgba(47, 109, 246, .88); color: #fff; font-size: 10.5px; font-weight: 600; }
+    .thumbDel { position: absolute; right: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%; border: none; background: rgba(16, 24, 40, .55); color: #fff; cursor: pointer; font-size: 12px; line-height: 1; }
+    .empty { text-align: center; padding: 14px 8px; border: 1px dashed #d8e3f2; border-radius: 12px; background: #fbfdff; }
+    .empty .ei { font-size: 24px; line-height: 1.2; }
+    .empty .et { font-size: 12px; color: #5b6779; margin-top: 3px; }
+
+    /* ── 题目 / 答案卡 ── */
+    .qcard { border: 1px solid var(--dsw-alias-border-l1); border-radius: 12px; padding: 10px 12px; background: #fff; }
+    .qhead { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    .qno { font-weight: 700; font-size: 12.5px; color: #16202e; }
+    .numBadge { min-width: 22px; height: 22px; padding: 0 6px; border-radius: 7px; background: linear-gradient(135deg, #5b9bff, #2f6df6); color: #fff; font-size: 11.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+    .numBadge.purple { background: linear-gradient(135deg, #a78bfa, #7c5cf0); }
+    .stemBox { background: #f7fafd; border: 1px solid #e7eef8; border-left: 3px solid #7fb0ff; border-radius: 8px; padding: 8px 10px; font-size: 12.5px; color: #1d2b3d; white-space: pre-wrap; word-break: break-word; }
+    .ansBox { margin-top: 8px; padding: 8px 10px; border-radius: 8px; border: 1px solid; font-size: 12.5px; white-space: pre-wrap; word-break: break-word; }
+    .ansBox.green { background: var(--c-green-bg); border-color: var(--c-green-bd); color: #12603a; }
+    .ansBox.blue { background: var(--c-blue-bg); border-color: var(--c-blue-bd); color: #1d4ed8; }
+    .ansBox .al { font-size: 11px; font-weight: 700; letter-spacing: .3px; margin-bottom: 3px; display: flex; align-items: center; gap: 5px; opacity: .95; }
+    .steps { margin: 8px 0 0; padding-left: 20px; font-size: 12.5px; color: #41506a; }
+    .steps li { margin: 3px 0; }
+    .steps li::marker { color: var(--c-blue); font-weight: 700; }
+
+    /* ── 判定行 ── */
+    .judge { display: flex; gap: 10px; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--dsw-alias-border-l1); background: #fff; }
+    .judge.ok { border-color: var(--c-green-bd); background: linear-gradient(180deg, #f4fdf7, #fff); }
+    .judge.bad { border-color: var(--c-red-bd); background: linear-gradient(180deg, #fff6f6, #fff); }
+    .judge.pend { border-color: var(--c-amber-bd); background: linear-gradient(180deg, #fffaf0, #fff); }
+    .jIco { width: 28px; height: 28px; flex: none; border-radius: 50%; color: #fff; font-size: 14px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+    .jIco.ok { background: linear-gradient(135deg, #41d16a, #16a34a); }
+    .jIco.bad { background: linear-gradient(135deg, #ff8080, #dc2626); }
+    .jIco.pend { background: linear-gradient(135deg, #fbc46b, #d97706); }
+    .jBody { min-width: 0; flex: 1 1 auto; }
+    .jTitle { font-size: 12.5px; font-weight: 700; color: #16202e; display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .line { font-size: 12.5px; margin-top: 4px; color: #26364d; white-space: pre-wrap; word-break: break-word; }
+    .lb { display: inline-block; min-width: 58px; color: #7a8699; font-size: 11.5px; }
+    .line.err { color: #a51c26; }
+    .math { font-family: "Cambria Math", "Segoe UI", Consolas, monospace; }
+
+    /* ── 知识点卡 ── */
+    .kpTag { display: inline-block; padding: 2px 9px; margin: 0 6px 4px 0; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: var(--c-purple-bg); color: #5b3fd1; border: 1px solid var(--c-purple-bd); }
+    .kpName { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #3b2f8f; }
+    .kpExplain { margin-top: 3px; font-size: 12.5px; color: #3c4a60; }
+    .kpPit { margin-top: 6px; padding: 6px 9px; border-radius: 8px; font-size: 12.5px; background: var(--c-amber-bg); border: 1px solid var(--c-amber-bd); color: #8a5a08; }
+    .kpVar { margin-top: 6px; padding: 7px 9px; border-radius: 8px; font-size: 12.5px; background: #f6f9ff; border: 1px solid #e2ecfb; color: #26456f; }
+    .kpVar .vv { color: #12603a; }
+    .ocrText { max-height: 260px; overflow: auto; margin: 0; padding: 9px 11px; border-radius: 10px; background: #f7fafd; border: 1px solid #e7eef8; font-size: 12px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; color: #26364d; }
+    #markWrap { position: relative; }
+    .hot { position: absolute; border-radius: 8px; cursor: pointer; transition: background .15s, box-shadow .15s; }
+    .hot:hover { background: rgba(59, 130, 246, .16); box-shadow: inset 0 0 0 2px rgba(59, 130, 246, .75); }
+    .flash { box-shadow: 0 0 0 3px rgba(59, 130, 246, .55) !important; transition: box-shadow .25s; }
+    .advice { margin-top: 8px; padding: 9px 11px; border-radius: 10px; background: linear-gradient(120deg, #eef4ff, #f5f0ff); border: 1px solid #e0e7fb; font-size: 12.5px; color: #26456f; }
+
+    .spin { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(22, 32, 46, .18); border-top-color: #26b04c; border-radius: 50%; animation: sp .8s linear infinite; }
+    @keyframes sp { to { transform: rotate(360deg); } }
+    details > summary { cursor: pointer; color: var(--dsw-alias-label-secondary); font-size: 12.5px; }
+    .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+    .field label { font-size: 11.5px; color: var(--dsw-alias-label-secondary); }
+    .tag { display: inline-block; padding: 1px 8px; margin: 0 6px 4px 0; border-radius: 999px; font-size: 11.5px; border: 1px solid var(--dsw-alias-border-l1); color: #5b6779; background: #fff; }
+    #msg { min-height: 18px; }
+  </style>
+</head>
+<body>
+<div class="dshell">
+
+  <div class="hero">
+    <div class="heroIco">📷</div>
+    <div class="grow">
+      <div class="heroTitle">作业批改</div>
+      <div class="heroSub">拍下题目与手写作答 → 识别 → 判对错 → 正确答案 + 知识点讲解</div>
+    </div>
+    <button class="dshell-btn dshell-btnGhost" id="btnStandalone" type="button">在新窗口打开</button>
+  </div>
+  <div class="row">
+    <span class="dshell-badge" id="bdCam">相机 未开启</span>
+    <span class="dshell-badge" id="bdChan">识别服务 直连</span>
+    <span class="dshell-badge hid" id="bdOcr">本机OCR 未启动</span>
+    <span class="dshell-badge" id="bdStep">待采集</span>
+    <span class="grow"></span>
+    <button class="dshell-btn dshell-btnGhost" id="btnReload" type="button" title="重新加载这个窗口（拿最新版本 / 重排一次结果）">🔄 刷新窗口</button>
+  </div>
+  <div class="row">
+    <span class="dshell-muted" id="cfgEcho"></span>
+  </div>
+
+  <!-- ================= 采集区 ================= -->
+  <div class="dshell-card" id="captureCard">
+    <div class="row">
+      <span class="secIco blue">📷</span>
+      <b style="font-size:13px">采集作业照片</b>
+      <span class="grow"></span>
+      <span class="chip green hid" id="capDone">✔ 已批改完成</span>
+      <button class="dshell-btn dshell-btnGhost" id="btnCapToggle" type="button">收起采集区</button>
+    </div>
+    <div id="capBody">
+    <div class="row" style="margin-top:10px">
+      <button class="dshell-btn" id="btnCam">开启摄像头（申请权限）</button>
+      <button class="dshell-btn dshell-btnGhost hid" id="btnSnap">拍照</button>
+      <button class="dshell-btn dshell-btnGhost hid" id="btnFlip">切换镜头</button>
+      <button class="dshell-btn dshell-btnGhost hid" id="btnCamOff">关闭摄像头</button>
+    </div>
+    <div class="flow" style="margin-top:10px">
+      <div class="fs blue"><b>1</b>拍题目 / 手写作答</div>
+      <div class="fs green"><b>2</b>识别题目与作答</div>
+      <div class="fs amber"><b>3</b>判对错、给正确答案</div>
+      <div class="fs purple"><b>4</b>知识点讲解 + 举一反三</div>
+    </div>
+    <p class="dshell-sub" style="margin:8px 0 0">
+      一张照片可以只拍题目，也可以题目 + 手写作答拍在同一张里；多道题可以分多张拍，我会按题号拆开批改。
+      也可以直接 <b>上传图片</b> 或 <b>Ctrl+V 粘贴</b> 截图。
+      <b>拍照时尽量拍满、拍清楚</b>：手写字母（如 ∠DGC）容易看错，所以照片会按原分辨率切成高清小块再交给模型看。
+    </p>
+
+    <div class="hid" id="camBox" style="margin-top:10px">
+      <video id="video" playsinline muted></video>
+    </div>
+
+    <div class="row" style="margin-top:10px">
+      <button class="dshell-btn dshell-btnGhost" id="btnUpload">上传 / 本地图片</button>
+      <button class="dshell-btn dshell-btnGhost" id="btnPasteTip">粘贴截图</button>
+      <button class="dshell-btn dshell-btnGhost" id="btnSample">载入示例结果</button>
+      <input type="file" id="file" accept="image/*" multiple class="hid" />
+    </div>
+
+    <div class="dshell-divider"></div>
+    <div class="thumbs" id="thumbs"></div>
+    <div class="empty" id="thumbEmpty">
+      <div class="ei">🖼️</div>
+      <div class="et">还没有照片：点「开启摄像头」拍一张，或上传 / 粘贴截图（最多可连拍多道题）</div>
+    </div>
+
+    <div class="dshell-divider"></div>
+    <div class="row">
+      <input class="dshell-input grow" id="hint" placeholder="补充说明（可选）：如「五年级数学，只批改第 2、3 题」" />
+      <button class="dshell-btn" id="btnGrade">开始批改</button>
+      <button class="dshell-btn dshell-btnGhost" id="btnClear">清空</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <label class="chip blue" style="cursor:pointer" title="把照片按原分辨率切成高清小块再识别，手写字母/小字认得准很多（推荐开启）">
+        <input type="checkbox" id="hiRes" checked style="margin:0 2px 0 0" />
+        小字放大：分块高清识别
+      </label>
+      <label class="chip green" style="cursor:pointer" title="判错的题会再验一遍：先重看手写字母、再把结论代回验算，发现是自己看错就改判，避免冤枉学生">
+        <input type="checkbox" id="recheck" checked style="margin:0 2px 0 0" />
+        错题复核：判错的题再验一遍
+      </label>
+      <label class="chip purple" style="cursor:pointer" title="批改完成后，把每道题裁切放大 2 倍再读一遍：两次读法不一致的题判「存疑」而不判错（多花约 30 秒，手写认得更准）">
+        <input type="checkbox" id="refineOn" checked style="margin:0 2px 0 0" />
+        放大精读复核（推荐）
+      </label>
+      <label class="chip amber" style="cursor:pointer" title="先用本机离线 OCR 转写文字，再把转写结果交给模型判卷（需先双击「作业批改-启动OCR.bat」）">
+        <input type="checkbox" id="ocrFirst" style="margin:0 2px 0 0" />
+        先用本机 OCR 转写
+      </label>
+      <label class="chip blue" style="cursor:pointer" title="连跑两遍，两遍结论不一致的题自动标为「存疑」、不计入错误">
+        <input type="checkbox" id="strict" style="margin:0 2px 0 0" />
+        严格模式：跑两遍交叉校验（慢一倍）
+      </label>
+    </div>
+    <div class="hid" id="progBox" style="margin-top:10px">
+      <div class="dshell-progress"><div class="dshell-progressBar" id="progBar" style="width:8%"></div></div>
+      <p class="dshell-sub" style="margin:6px 0 0"><span class="spin"></span> <span id="progTxt">正在识别与批改…</span></p>
+    </div>
+    </div><!-- /capBody -->
+    <p class="dshell-sub" id="msg" style="margin:8px 0 0"></p>
+  </div>
+
+  <!-- ================= 结果区 ================= -->
+  <div id="resultBox" class="hid">
+
+    <div id="summary"></div>
+
+    <div class="dshell-card hid" id="markCard">
+      <div class="secTitle"><span class="secIco blue">🖍️</span>原图批改（题框可点击 · 跳到答案与讲解）</div>
+      <div class="row" style="margin-bottom:8px">
+        <span class="chip red">✔ 正确</span>
+        <span class="chip red">✘ 错误</span>
+        <span class="chip red">○ 小错误（圈出）</span>
+        <span class="chip amber">▢ 存疑 / 未定位</span>
+        <span class="grow"></span>
+        <button class="dshell-btn dshell-btnGhost" id="btnRemark" type="button">只重新标注</button>
+        <button class="dshell-btn dshell-btnGhost" id="btnSaveMark" type="button">下载批注图</button>
+      </div>
+      <div id="markWrap"></div>
+      <p class="dshell-muted" id="markHint" style="margin:8px 0 0"></p>
+      <p class="dshell-muted" id="markPath" style="margin:8px 0 0"></p>
+    </div>
+
+    <div class="dshell-card">
+      <div class="secTitle"><span class="secIco blue">📘</span>一、题目与答案</div>
+      <div id="secQA" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <div class="dshell-card">
+      <div class="secTitle"><span class="secIco amber">✅</span>二、正误判定</div>
+      <div id="secJudge" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <div class="dshell-card">
+      <div class="secTitle"><span class="secIco purple">💡</span>三、知识点分析</div>
+      <div id="secKP" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="overall"></div>
+    </div>
+
+    <div class="row">
+      <button class="dshell-btn" id="btnExport">导出批改报告 (.md)</button>
+      <button class="dshell-btn dshell-btnGhost" id="btnRegrade">重新批改</button>
+      <button class="dshell-btn hid" id="btnRefix">按修正后的文本重新判卷</button>
+    </div>
+
+    <div class="dshell-card hid" id="ocrCard">
+      <div class="secTitle"><span class="secIco green">🔎</span>本机 OCR 转写原文（离线识别，供核对）</div>
+      <pre class="ocrText math" id="ocrTextBox"></pre>
+    </div>
+  </div>
+
+  <!-- ================= 设置 ================= -->
+  <div class="dshell-card">
+    <details id="setBox">
+      <summary>⚙️ 识别服务设置（默认已填好，可不动）</summary>
+      <div style="margin-top:10px">
+        <div class="field">
+          <label>通道</label>
+          <select class="dshell-input" id="setMode">
+            <option value="auto">自动（先直连，跨域被拦则走本机中转）</option>
+            <option value="direct">只用直连（浏览器 → 模型 API）</option>
+            <option value="relay">只用本机中转（http://127.0.0.1:8899）</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>API 地址（OpenAI 兼容）</label>
+          <input class="dshell-input" id="setBase" />
+        </div>
+        <div class="field">
+          <label>API Key</label>
+          <input class="dshell-input" id="setKey" type="password" />
+        </div>
+        <div class="field">
+          <label>模型（需支持图片识别）</label>
+          <input class="dshell-input" id="setModel" />
+        </div>
+        <div class="field">
+          <label>本机中转地址</label>
+          <input class="dshell-input" id="setRelay" />
+        </div>
+        <div class="field">
+          <label>本机 OCR 地址（离线转写，可选）</label>
+          <input class="dshell-input" id="setOcr" />
+        </div>
+        <div class="row">
+          <button class="dshell-btn dshell-btnGhost" id="btnSave">保存设置</button>
+          <button class="dshell-btn dshell-btnGhost" id="btnTest">连通性自检</button>
+          <button class="dshell-btn dshell-btnGhost" id="btnDetect">检测可用模型</button>
+          <button class="dshell-btn dshell-btnGhost" id="btnTestOcr">测试本机 OCR</button>
+          <button class="dshell-btn dshell-btnGhost" id="btnResetCfg">恢复默认设置</button>
+        </div>
+        <p class="dshell-muted" style="margin:6px 0 0">
+          报「Model not exist」= 模型名在当前地址上不存在：点「检测可用模型」或「恢复默认设置」（百炼 + <b>qwen3-vl-plus</b>）。
+          想用本机离线 OCR：双击项目文件夹里的「作业批改-启动OCR.bat」，再勾选采集区的「先用本机 OCR 转写」。
+        </p>
+      </div>
+    </details>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var LS_SET = 'hwgrade.settings.v2';
+  var LS_RES = 'hwgrade.result.v2';
+  var BUILD = '2026-10-11 14:00';   // 每次改这个文件都会更新；页面会自己比对磁盘版本并自动刷新
+
+  var DEFAULT_SETTINGS = {
+    mode: 'auto',
+    apiBaseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    apiKey: 'sk-ws-H.PDMRRLY.FMXj.MEYCIQDxpQt0TdAkw9gpOt1SflwJvM4gEPaXsQrEu9EMdJJPwQIhAMvLSxeqLt_rMy7uQ31R1kYhb07eCbp-3OFZFbX4yBRO',
+    model: 'qwen3-vl-plus',
+    relayUrl: 'http://127.0.0.1:8899/v1',
+    ocrUrl: 'http://127.0.0.1:8897'
+  };
+  /* 已经下线、不能再用的模型名（保存过这些名字的一律自动换掉） */
+  var RETIRED_MODELS = ['qwen-vl-max', 'qwen-vl-plus', 'qwen-vl-max-latest', 'qwen-vl-max-2024-08-09'];
+
+  var photos = [];        // {id, dataUrl}
+  var result = null;      // 批改结果
+  var busy = false;
+  var stream = null;
+  var facing = 'environment';
+  var relayAlive = false;
+  var seq = 0;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---------------- 设置 ---------------- */
+  function readSettings() {
+    var s = {};
+    for (var k in DEFAULT_SETTINGS) s[k] = DEFAULT_SETTINGS[k];
+    try {
+      var raw = localStorage.getItem(LS_SET);
+      if (raw) {
+        var o = JSON.parse(raw);
+        for (var k2 in o) if (o[k2] !== undefined && o[k2] !== null && o[k2] !== '') s[k2] = o[k2];
+      }
+    } catch (e) { }
+    return s;
+  }
+  function fillSettingsForm() {
+    var s = readSettings();
+    $('setMode').value = s.mode;
+    $('setBase').value = s.apiBaseUrl;
+    $('setKey').value = s.apiKey;
+    $('setModel').value = s.model;
+    $('setRelay').value = s.relayUrl;
+    $('setOcr').value = s.ocrUrl || DEFAULT_SETTINGS.ocrUrl;
+    var echo = $('cfgEcho');
+    if (echo) echo.textContent = '当前识别配置：' + s.apiBaseUrl + ' · 模型 ' + s.model + ' · 版本 ' + BUILD;
+  }
+  function saveSettings() {
+    var s = {
+      mode: $('setMode').value,
+      apiBaseUrl: $('setBase').value.trim(),
+      apiKey: $('setKey').value.trim(),
+      model: $('setModel').value.trim(),
+      relayUrl: $('setRelay').value.trim(),
+      ocrUrl: $('setOcr').value.trim()
+    };
+    localStorage.setItem(LS_SET, JSON.stringify(s));
+    $('cfgEcho').textContent = '当前识别配置：' + s.apiBaseUrl + ' · 模型 ' + s.model + ' · 版本 ' + BUILD;
+    say('设置已保存。');
+    probeRelay();
+  }
+
+  /* ---------------- 小工具 ---------------- */
+  function say(t, kind) {
+    var el = $('msg');
+    el.textContent = t || '';
+    el.style.color = kind === 'bad' ? 'var(--hw-bad)' : (kind === 'ok' ? 'var(--hw-ok)' : '');
+  }
+  function esc(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+  function badge(id, text, kind) {
+    var el = $(id);
+    el.className = 'dshell-badge' + (kind === 'ok' ? ' dshell-badgeDone' : (kind === 'wait' ? ' dshell-badgeWait' : ''));
+    el.textContent = text;
+  }
+  /* 轻量数学美化：把 LaTeX 片段换成可读符号（含常见命令兜底，避免留下 { } 碎屑） */
+  var SUP = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '+': '⁺', '-': '⁻', 'n': 'ⁿ' };
+  var SUB = { '0': '₀', '1': '₁', '2': '₂', '3': '₃', '4': '₄', '5': '₅', '6': '₆', '7': '₇', '8': '₈', '9': '₉', 'a': 'ₐ', 'n': 'ₙ', 'x': 'ₓ' };
+  var LATEX = {
+    '\\because': '∵', '\\therefore': '∴', '\\parallel': '∥', '\\perp': '⊥', '\\sim': '∽', '\\cong': '≅',
+    '\\angle': '∠', '\\triangle': '△', '\\degree': '°', '\\circ': '°', '\\pi': 'π',
+    '\\alpha': 'α', '\\beta': 'β', '\\gamma': 'γ', '\\theta': 'θ', '\\lambda': 'λ', '\\mu': 'μ',
+    '\\times': '×', '\\div': '÷', '\\cdot': '·', '\\pm': '±', '\\mp': '∓',
+    '\\leq': '≤', '\\le': '≤', '\\geq': '≥', '\\ge': '≥', '\\neq': '≠', '\\ne': '≠', '\\approx': '≈', '\\equiv': '≡',
+    '\\infty': '∞', '\\in': '∈', '\\notin': '∉', '\\subset': '⊂', '\\cup': '∪', '\\cap': '∩', '\\emptyset': '∅',
+    '\\Rightarrow': '⇒', '\\Leftarrow': '⇐', '\\Leftrightarrow': '⇔',
+    '\\rightarrow': '→', '\\to': '→', '\\leftarrow': '←', '\\mapsto': '↦',
+    '\\ldots': '…', '\\dots': '…', '\\cdots': '⋯', '\\prime': '′',
+    '\\left': '', '\\right': '', '\\quad': ' ', '\\qquad': ' ', '\\displaystyle': ''
+  };
+  function math(s) {
+    if (s == null) return '';
+    var t = String(s);
+    t = t.replace(/\$\$?|\\\(|\\\)|\\\[|\\\]/g, '');                       // 分隔符
+    t = t.replace(/\\(?:begin|end)\s*\{[^{}]*\}/g, ' ');                    // \begin{cases} 之类
+    t = t.replace(/\\\\/g, ' ');                                            // 换行
+    t = t.replace(/\\(?:text|mathrm|mathbf|mathit|operatorname|mbox)\s*\{([^{}]*)\}/g, '$1');
+    t = t.replace(/\\(?:dfrac|tfrac|frac)\s*\{([^{}]*)\}\s*\{([^{}]*)\}/g, '($1)/($2)');
+    t = t.replace(/\\([a-zA-Z]+)\s*\{([^{}]*)\}/g, function (m, name, arg) {
+      if (name === 'sqrt') return '√(' + arg + ')';
+      if (name === 'overline' || name === 'bar') return arg + '‾';
+      if (name === 'underline') return arg + '_';
+      if (name === 'vec') return arg + '⃗';
+      return arg;                                   // 未知命令：保留内容，别丢字
+    });
+    t = t.replace(/\^\s*\{?\s*\\circ\s*\}?/g, '°');                          // ^\circ → °
+    t = t.replace(/\^\s*\{?([0-9+\-n]+)\}?/g, function (m, d) { return String(d).split('').map(function (c) { return SUP[c] || c; }).join(''); });
+    t = t.replace(/_\s*\{?([0-9a-zA-Z])\}?/g, function (m, d) { return SUB[d] || d; });
+    t = t.replace(/\\[a-zA-Z]+\*?/g, function (m) {
+      var k = m.replace(/\*$/, '');
+      return Object.prototype.hasOwnProperty.call(LATEX, k) ? LATEX[k] : '';
+    });
+    t = t.replace(/\\[,;:! ]/g, ' ');
+    t = t.replace(/[{}]/g, '');                                             // 残留花括号
+    t = t.replace(/\\/g, '');                                               // 残留反斜杠
+    t = t.replace(/&/g, ' ');
+    t = t.replace(/[ \t]{2,}/g, ' ');
+    return esc(t);
+  }
+  /* 相邻重复内容只保留一份（分块图重叠时模型容易把同一段抄两遍） */
+  function collapseRepeat(input) {
+    var s = String(input == null ? '' : input);
+    // 1) 连续重复的整行
+    var lines = s.split('\n'), kept = [];
+    for (var i = 0; i < lines.length; i++) {
+      if (i > 0 && lines[i].trim() && lines[i].trim() === lines[i - 1].trim()) continue;
+      kept.push(lines[i]);
+    }
+    s = kept.join('\n');
+    // 2) 紧挨着重复的短语（长度 ≥5，允许中间隔一个空白）
+    for (var pass = 0; pass < 4; pass++) {
+      var changed = false;
+      var n = s.length;
+      var maxLen = Math.min(90, Math.floor(n / 2));
+      for (var len = maxLen; len >= 5 && !changed; len--) {
+        for (var j = 0; j + 2 * len <= n; j++) {
+          var a = s.substr(j, len);
+          if (!/\S/.test(a)) continue;
+          var rest = s.substr(j + len);
+          var wsm = rest.match(/^\s*/);
+          var ws = wsm ? wsm[0] : '';
+          if (rest.substr(ws.length, len) !== a) continue;
+          s = s.slice(0, j + len) + rest.slice(ws.length + len);
+          changed = true;
+          break;
+        }
+      }
+      if (!changed) break;
+    }
+    return s.trim();
+  }
+  function download(name, text) {
+    var blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+  }
+
+  /* ---------------- 相机 ---------------- */
+  function camSupported() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  }
+  function inIframe() {
+    try { return window.top !== window.self; } catch (e) { return true; }
+  }
+  async function startCam() {
+    if (!camSupported()) {
+      say('这个浏览器不支持摄像头接口，请用「上传 / 本地图片」或粘贴截图。', 'bad');
+      return;
+    }
+    try {
+      if (stream) stopCam();
+      stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing, width: { ideal: 1920 }, height: { ideal: 1080 } },
+        audio: false
+      });
+      var v = $('video');
+      v.srcObject = stream;
+      await v.play();
+      $('camBox').classList.remove('hid');
+      $('btnSnap').classList.remove('hid');
+      $('btnFlip').classList.remove('hid');
+      $('btnCamOff').classList.remove('hid');
+      $('btnCam').classList.add('hid');
+      badge('bdCam', '相机 已开启', 'ok');
+      say('摄像头已就绪，对准作业纸后点「拍照」。');
+    } catch (e) {
+      var name = (e && e.name) || '';
+      var why = '';
+      if (name === 'NotAllowedError' || name === 'SecurityError') {
+        why = inIframe()
+          ? '浏览器不允许在侧边栏小窗里使用摄像头（多数浏览器要求 iframe 显式授权）。点右上角「在新窗口打开」，或直接用「上传 / 本地图片」。'
+          : '摄像头权限被拒绝，请在浏览器地址栏的权限图标里允许摄像头后重试。';
+      } else if (name === 'NotFoundError' || name === 'OverconstrainedError') {
+        why = '没有找到可用摄像头，请改用「上传 / 本地图片」。';
+      } else {
+        why = '摄像头启动失败：' + (e && e.message ? e.message : e) + '（可改用「上传 / 本地图片」）';
+      }
+      badge('bdCam', '相机 不可用', 'wait');
+      say(why, 'bad');
+    }
+  }
+  function stopCam() {
+    if (stream) {
+      stream.getTracks().forEach(function (t) { t.stop(); });
+      stream = null;
+    }
+    $('camBox').classList.add('hid');
+    $('btnSnap').classList.add('hid');
+    $('btnFlip').classList.add('hid');
+    $('btnCamOff').classList.add('hid');
+    $('btnCam').classList.remove('hid');
+    badge('bdCam', '相机 未开启');
+  }
+  function snap() {
+    var v = $('video');
+    if (!v.videoWidth) { say('摄像头还没出画面，稍等一下再拍。', 'bad'); return; }
+    var max = 2400;
+    var w = v.videoWidth, h = v.videoHeight;
+    var r = Math.min(1, max / Math.max(w, h));
+    var c = document.createElement('canvas');
+    c.width = Math.round(w * r); c.height = Math.round(h * r);
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
+    addPhoto(c.toDataURL('image/jpeg', 0.9));
+  }
+  async function fileToDataUrl(f, max) {
+    try {
+      var bmp = await createImageBitmap(f);
+      var w = bmp.width, h = bmp.height;
+      var r = Math.min(1, (max || 2400) / Math.max(w, h));
+      var c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(w * r));
+      c.height = Math.max(1, Math.round(h * r));
+      c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+      var out = c.toDataURL('image/jpeg', 0.9);
+      if (bmp.close) bmp.close();
+      return out;
+    } catch (e) {
+      return await new Promise(function (res, rej) {
+        var fr = new FileReader();
+        fr.onload = function () { res(fr.result); };
+        fr.onerror = function () { rej(new Error('读取图片失败')); };
+        fr.readAsDataURL(f);
+      });
+    }
+  }
+  function addPhoto(dataUrl) {
+    photos.push({ id: ++seq, dataUrl: dataUrl });
+    renderThumbs();
+    badge('bdStep', '已采集 ' + photos.length + ' 张', 'wait');
+    say('已加入第 ' + photos.length + ' 张照片。');
+  }
+  function renderThumbs() {
+    var box = $('thumbs');
+    box.innerHTML = photos.map(function (p, i) {
+      return '<div class="thumb"><img src="' + p.dataUrl + '" alt="照片' + (i + 1) + '"/>'
+        + '<span class="thumbTag">图' + (i + 1) + '</span>'
+        + '<button class="thumbDel" data-del="' + p.id + '" title="删除">×</button></div>';
+    }).join('');
+    $('thumbEmpty').classList.toggle('hid', photos.length > 0);
+    Array.prototype.forEach.call(box.querySelectorAll('[data-del]'), function (b) {
+      b.addEventListener('click', function () {
+        var id = Number(b.getAttribute('data-del'));
+        photos = photos.filter(function (p) { return p.id !== id; });
+        renderThumbs();
+        badge('bdStep', photos.length ? ('已采集 ' + photos.length + ' 张') : '待采集', photos.length ? 'wait' : '');
+      });
+    });
+  }
+
+  /* 小字放大：把整页按原分辨率切成若干带重叠的高清块
+     —— 整页 2400px 的图会被模型内部压缩，手写小字母（∠DGC）就糊了；
+        切成 0.6M 像素左右的小块后不再被压缩，识别准确率明显提升。 */
+  function loadImg(src) {
+    return new Promise(function (res, rej) {
+      var im = new Image();
+      im.onload = function () { res(im); };
+      im.onerror = function () { rej(new Error('图片解码失败')); };
+      im.src = src;
+    });
+  }
+  function chooseGrid(w, h, maxTiles) {
+    var best = { c: 1, r: 1, score: Infinity };
+    for (var c = 1; c <= 4; c++) {
+      for (var r = 1; r <= 4; r++) {
+        if (c * r > maxTiles) continue;
+        var tw = w / c, th = h / r, px = tw * th;
+        if (px > 1400000) continue;
+        // 块越小越清晰，但太碎会切散题目；同时让块的长宽比贴近原图，避免出现细长条
+        var score = Math.abs(Math.log(px / 600000)) + (c * r - 1) * 0.06
+          + 0.25 * Math.abs(Math.log((tw / th) / (w / h)));
+        if (score < best.score) best = { c: c, r: r, score: score };
+      }
+    }
+    return best;
+  }
+  async function splitTiles(dataUrl, maxTiles) {
+    var im = await loadImg(dataUrl);
+    var w = im.naturalWidth, h = im.naturalHeight;
+    if (Math.max(w, h) <= 1100) return [dataUrl];        // 本来就不大，不用切
+    var g = chooseGrid(w, h, maxTiles || 6);
+    if (g.c === 1 && g.r === 1) return [dataUrl];
+    var tw = w / g.c, th = h / g.r;
+    var ox = Math.round(tw * 0.08), oy = Math.round(th * 0.08);
+    var out = [];
+    for (var r = 0; r < g.r; r++) {
+      for (var c = 0; c < g.c; c++) {
+        var x = Math.max(0, Math.round(c * tw) - ox);
+        var y = Math.max(0, Math.round(r * th) - oy);
+        var ww = Math.min(w - x, Math.round(tw) + ox * 2);
+        var hh = Math.min(h - y, Math.round(th) + oy * 2);
+        var cv = document.createElement('canvas');
+        cv.width = ww; cv.height = hh;
+        cv.getContext('2d').drawImage(im, x, y, ww, hh, 0, 0, ww, hh);
+        out.push(cv.toDataURL('image/jpeg', 0.92));
+      }
+    }
+    return out.length > 1 ? out : [dataUrl];
+  }
+  /* 按开关决定这次要发哪些图（总张数上限 9，避免超时/超 token） */
+  async function buildImageList() {
+    var hi = !!($('hiRes') && $('hiRes').checked);
+    if (!hi) return photos.map(function (p) { return p.dataUrl; });
+    var per = photos.length > 3 ? 2 : (photos.length > 1 ? 4 : 6);
+    var out = [];
+    for (var i = 0; i < photos.length; i++) {
+      var t = await splitTiles(photos[i].dataUrl, per);
+      for (var j = 0; j < t.length; j++) out.push(t[j]);
+    }
+    return out.length > 9 ? photos.map(function (p) { return p.dataUrl; }) : out;
+  }
+
+  /* ---------------- 原图批注（✔ / ✘ / 圈） ---------------- */
+  /* 每道题的标记类型：ok=✓  wrong=✗  minor=圈  pending=虚线框+? */
+  function markLevel(q) {
+    if (q.isCorrect) return /过程存疑/.test(String(q.verdict)) ? 'pending' : 'ok';
+    if (q.pending) return 'pending';
+    if (/部分正确/.test(String(q.verdict))) return 'minor';
+    // 只有"非实质性小毛病"才画圈；算错、答错一律打 ✘
+    if (/漏写单位|单位错误|漏单位|书写|格式|表述|不规范|未化简|步骤不完整|缺步骤/.test(String(q.errorReason))) return 'minor';
+    return 'wrong';
+  }
+  var LEVEL_TEXT = { ok: '对', wrong: '错', minor: '小错', pending: '存疑' };
+
+  function locatePrompt(photoIndex, total, qs) {
+    var L = ['', '', '【批改标注定位】这是一张作业照片（第 ' + (photoIndex + 1) + ' / ' + total + ' 张）。',
+      '请为下面每一道题找出"整道题的完整区域"（题号、题干、图形、学生的作答都算在内）在图上的位置，',
+      '用归一化坐标（相对整张图，左上角 0,0，右下角 1,1）：x1,y1 = 该题区域左上角，x2,y2 = 右下角。',
+      '要求：',
+      '① 框必须从这道题的**题号**开始，到这道题作答结束为止；',
+      '② **不要把页眉、标题、姓名 / 班级 / 学号那一行、页码、以及其它任何不是这道题的内容框进来**；',
+      '③ 相邻题目之间要分清楚，不要把两道题框在同一个框里，也不要只框手写部分；',
+      '④ 每道题只输出一条，题号照抄下面的写法。',
+      '只输出 JSON，不要解释，也不要输出批改结果：',
+      '{"boxes":[{"no":"题号","x1":0.05,"y1":0.12,"x2":0.48,"y2":0.30}]}',
+      '',
+      '需要定位的题号（照抄这个 no，不要改）：'];
+    qs.forEach(function (q) { L.push('- ' + q.no); });
+    return L.join('\n');
+  }
+  /* 题号的"骨架"：只留数字序列，用来容忍「例1(1) / 例1（1） / 第1题(1) / 1-1」这类写法差异 */
+  function noKey(no) {
+    var d = String(no == null ? '' : no).match(/\d+/g);
+    return d ? d.join('-') : '';
+  }
+  /* 在定位结果里找某道题的框：精确 → 数字骨架相同 → 只有一条时按首个数字兜底 */
+  function lookupBox(boxes, no) {
+    if (!boxes) return null;
+    var s = String(no == null ? '' : no).trim();
+    if (boxes[s]) return boxes[s];
+    var k = noKey(s);
+    if (!k) return null;
+    var hit = null, keys = Object.keys(boxes);
+    for (var i = 0; i < keys.length; i++) {
+      if (noKey(keys[i]) === k) return boxes[keys[i]];
+    }
+    // 退一步：只要首个数字相同，且只有唯一一条候选
+    var first = k.split('-')[0], cands = [];
+    for (var j = 0; j < keys.length; j++) {
+      if (noKey(keys[j]).split('-')[0] === first) cands.push(boxes[keys[j]]);
+    }
+    if (cands.length === 1) hit = cands[0];
+    return hit;
+  }
+  /* 解析模型返回的框，做边界与合法性检查 */
+  function parseBoxes(raw, qs) {
+    var arr = (raw && (raw.boxes || raw.questions || raw.data)) || [];
+    var byNo = {};
+    arr.forEach(function (b) {
+      if (!b) return;
+      var no = String(b.no == null ? '' : b.no).trim();
+      var x1 = Number(b.x1), y1 = Number(b.y1), x2 = Number(b.x2), y2 = Number(b.y2);
+      if (!no || isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return;
+      if (x1 > x2) { var t = x1; x1 = x2; x2 = t; }
+      if (y1 > y2) { var t2 = y1; y1 = y2; y2 = t2; }
+      var clamp = function (v) { return Math.max(0, Math.min(1, v)); };
+      x1 = clamp(x1); y1 = clamp(y1); x2 = clamp(x2); y2 = clamp(y2);
+      if (x2 - x1 < 0.01 || y2 - y1 < 0.005) return;
+      byNo[no] = { x1: x1, y1: y1, x2: x2, y2: y2 };
+    });
+    return byNo;
+  }
+  /* 题号牌在框内的位置（画布坐标）：保证整块牌子落在框里，绝不越界 */
+  function badgeRect(x1, y1, x2, y2, tw, th, inset, W) {
+    var lx = x2 - tw - 8 - inset;
+    if (lx < x1 + inset) lx = x1 + inset;
+    lx = Math.max(2, Math.min((W || 1e9) - tw - 14, lx));
+    var ly = y1 + th + inset;
+    if (ly > y2 - 4) ly = Math.max(th + 2, y2 - 4);
+    var rect = { x: lx - 5, y: ly - th + 3, w: tw + 14, h: th + 3 };
+    if (rect.x < x1) rect.x = x1 + 1;                                   // 双保险：夹进框内
+    if (rect.y < y1) rect.y = y1 + 1;
+    if (rect.x + rect.w > x2) rect.x = Math.max(x1 + 1, x2 - rect.w - 1);
+    if (rect.y + rect.h > y2) rect.y = Math.max(y1 + 1, y2 - rect.h - 1);
+    return rect;
+  }
+  /* 计算题号牌尺寸与位置：框太小就自动缩字号，保证牌子一定落在框内
+     measure(label, fsz) 返回文字宽度（画布用 measureText，SVG 用估算） */
+  function badgeLayout(measure, label, x1, y1, x2, y2, base, W) {
+    var fsz = Math.round(base * 0.021);
+    var th = Math.max(12, Math.round(base * 0.032));
+    var boxW = Math.max(24, x2 - x1), boxH = Math.max(18, y2 - y1);
+    // ① 牌子高度最多占框高的 45%（撑满框会显得序号太大），框矮就一起缩字号（不小于 14px，保证缩略图也看得清）
+    var maxTh = Math.max(12, Math.min(boxH - 6, Math.round(boxH * 0.45)));
+    if (th > maxTh) {
+      fsz = Math.max(14, Math.round(fsz * (maxTh / th)));
+      th = maxTh;
+    }
+    // ② 再按框的宽度限制牌子宽度
+    var tw = measure(label, fsz);
+    if (tw + 20 > boxW) {
+      var k = Math.max(0.5, (boxW - 20) / (tw + 20));
+      fsz = Math.max(9, Math.round(fsz * k));
+      th = Math.max(11, Math.round(th * k));
+      tw = measure(label, fsz);
+    }
+    return { fsz: fsz, tw: tw, th: th, rect: badgeRect(x1, y1, x2, y2, tw, th, Math.max(2, Math.round(base * 0.004)), W) };
+  }
+  /* 把标记画到原图上，返回新的图片 dataURL */
+  function drawMarks(imgEl, items) {
+    var W = imgEl.naturalWidth, H = imgEl.naturalHeight;
+    var cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    var g = cv.getContext('2d');
+    g.drawImage(imgEl, 0, 0);
+    var base = Math.max(W, H);
+    var lw = Math.max(3, Math.round(base * 0.004));
+
+    function px(v, total) { return v * total; }
+
+    items.forEach(function (it) {
+      var x1 = px(it.x1, W), y1 = px(it.y1, H), x2 = px(it.x2, W), y2 = px(it.y2, H);
+      var w = x2 - x1, h = y2 - y1;
+      var cx = x1 + w / 2, cy = y1 + h / 2;
+      // 老师红笔：对、错、小错都用红色；只有"存疑/未定位"用琥珀色区分
+      var color = it.level === 'pending' ? '#d97706' : '#e11d48';
+      var boxColor = it.fallback ? '#d97706' : (it.level === 'pending' ? '#d97706' : '#3b82f6');
+      g.lineWidth = lw;
+      g.lineCap = 'round';
+      g.lineJoin = 'round';
+
+      // ① 先给整道题套一个可见的圆角框（就是"把每道题的范围框出来"）
+      var pad = Math.max(2, Math.round(base * 0.004));
+      var rrad = Math.min(base * 0.012, Math.min(w, h) * 0.12);
+      g.save();
+      g.beginPath();
+      var bx = x1 - pad, by = y1 - pad, bw = w + pad * 2, bh = h + pad * 2;
+      g.moveTo(bx + rrad, by);
+      g.lineTo(bx + bw - rrad, by);
+      g.quadraticCurveTo(bx + bw, by, bx + bw, by + rrad);
+      g.lineTo(bx + bw, by + bh - rrad);
+      g.quadraticCurveTo(bx + bw, by + bh, bx + bw - rrad, by + bh);
+      g.lineTo(bx + rrad, by + bh);
+      g.quadraticCurveTo(bx, by + bh, bx, by + bh - rrad);
+      g.lineTo(bx, by + rrad);
+      g.quadraticCurveTo(bx, by, bx + rrad, by);
+      g.closePath();
+      g.fillStyle = it.level === 'pending' ? 'rgba(255,248,235,.30)' : 'rgba(255,255,255,.16)';
+      g.fill();
+      g.strokeStyle = boxColor;
+      g.lineWidth = Math.max(2, Math.round(lw * 0.75));
+      if (it.level === 'pending') g.setLineDash([lw * 3, lw * 2.2]);
+      g.stroke();
+      g.setLineDash([]);
+      g.restore();
+
+      g.strokeStyle = color;
+      g.lineWidth = it.level === 'wrong' ? lw * 1.35 : lw;      // 叉画粗一点，一眼看出错
+      var s = Math.min(Math.max(Math.min(w, h) * 0.55, base * 0.035), base * 0.11);   // 标记大小
+      if (it.level === 'ok') {
+        var mx = x2 - s * 0.72, my = y2 - h * 0.18;
+        if (mx < x1 + s * 0.2) mx = x1 + w * 0.5;
+        if (my < y1 + s * 0.5) my = y1 + s * 0.7;
+        g.beginPath();
+        g.moveTo(mx - s * 0.45, my - s * 0.05);
+        g.lineTo(mx - s * 0.12, my + s * 0.32);
+        g.lineTo(mx + s * 0.5, my - s * 0.42);
+        g.stroke();
+      } else if (it.level === 'wrong') {
+        var nx = x2 - s * 0.7, ny = y2 - h * 0.18;
+        if (nx < x1 + s * 0.2) nx = x1 + w * 0.5;
+        if (ny < y1 + s * 0.5) ny = y1 + s * 0.7;
+        g.beginPath();
+        g.moveTo(nx - s * 0.42, ny - s * 0.42);
+        g.lineTo(nx + s * 0.42, ny + s * 0.42);
+        g.moveTo(nx + s * 0.42, ny - s * 0.42);
+        g.lineTo(nx - s * 0.42, ny + s * 0.42);
+        g.stroke();
+      } else if (it.level === 'minor') {
+        g.beginPath();
+        g.ellipse(cx, cy, w / 2 + lw * 1.6, h / 2 + lw * 1.6, 0, 0, Math.PI * 2);
+        g.stroke();
+      } else {
+        g.setLineDash([lw * 3, lw * 2.4]);
+        g.beginPath();
+        g.rect(x1 - lw, y1 - lw, w + lw * 2, h + lw * 2);
+        g.stroke();
+        g.setLineDash([]);
+      }
+
+      // ② 题号牌画在【框内右上角】：不再画到框外，避免看起来"跑题"或飘到页眉
+      var sym = it.level === 'ok' ? '✔' : (it.level === 'wrong' ? '✘' : (it.level === 'minor' ? '○' : '?'));
+      var label = (it.fallback ? '未定位 ' : '') + String(it.no) + ' ' + sym;
+      var lay = badgeLayout(function (txt, fsz) {
+        g.font = 'bold ' + fsz + 'px "Microsoft YaHei", sans-serif';
+        return g.measureText(txt).width;
+      }, label, x1 - pad, y1 - pad, x2 + pad, y2 + pad, base, W);
+      g.font = 'bold ' + lay.fsz + 'px "Microsoft YaHei", sans-serif';
+      g.fillStyle = boxColor;                              // 实色底：一眼看出这块牌子属于这个框
+      g.fillRect(lay.rect.x, lay.rect.y, lay.rect.w, lay.rect.h);
+      g.strokeStyle = '#ffffff';
+      g.lineWidth = Math.max(2, lw * 0.5);
+      g.strokeRect(lay.rect.x, lay.rect.y, lay.rect.w, lay.rect.h);
+      g.fillStyle = '#ffffff';
+      g.fillText(label, lay.rect.x + 6, lay.rect.y + lay.th - 1);
+    });
+
+    // 右上角总评章
+    if (items.length) {
+      var okN = items.filter(function (i) { return i.level === 'ok'; }).length;
+      var txt = okN + '/' + items.length;
+      var r = base * 0.055;
+      var cxx = W - r - base * 0.02, cyy = r + base * 0.02;
+      g.beginPath();
+      g.arc(cxx, cyy, r, 0, Math.PI * 2);
+      g.strokeStyle = '#dc2626';
+      g.lineWidth = Math.max(3, lw * 1.2);
+      g.stroke();
+      g.fillStyle = '#dc2626';
+      g.font = 'bold ' + Math.round(r * 0.8) + 'px "Microsoft YaHei", sans-serif';
+      g.textAlign = 'center';
+      g.textBaseline = 'middle';
+      g.fillText(txt, cxx, cyy + r * 0.04);
+      g.textAlign = 'start';
+      g.textBaseline = 'alphabetic';
+    }
+    return cv.toDataURL('image/jpeg', 0.92);
+  }
+
+  /* 把标记转成 SVG（矢量，可当文本文件保存；照片以 base64 内嵌） */
+  function marksToSvg(items, imgDataUrl, W, H) {
+    var base = Math.max(W, H), lw = Math.max(3, Math.round(base * 0.004)), p = [];
+    p.push('<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '">');
+    p.push('<image href="' + imgDataUrl + '" xlink:href="' + imgDataUrl + '" x="0" y="0" width="' + W + '" height="' + H + '"/>');
+    items.forEach(function (it) {
+      var x1 = it.x1 * W, y1 = it.y1 * H, x2 = it.x2 * W, y2 = it.y2 * H;
+      var w = x2 - x1, h = y2 - y1, cx = x1 + w / 2, cy = y1 + h / 2;
+      var color = it.level === 'ok' ? '#16a34a' : (it.level === 'wrong' ? '#dc2626' : (it.level === 'minor' ? '#ea8c00' : '#7c5cf0'));
+      var s = Math.min(Math.max(Math.min(w, h) * 0.75, base * 0.035), base * 0.12);
+      p.push('<rect x="' + x1 + '" y="' + y1 + '" width="' + w + '" height="' + h + '" fill="none" stroke="' + color + '" stroke-width="1.5" opacity="0.35"/>');
+      if (it.level === 'ok' || it.level === 'wrong') {
+        var mx = x2 - s * 0.72, my = y2 - h * 0.18;
+        if (mx < x1 + s * 0.2) mx = x1 + w * 0.5;
+        if (my < y1 + s * 0.5) my = y1 + s * 0.7;
+        if (it.level === 'ok') {
+          p.push('<polyline points="' + (mx - s * 0.45) + ',' + (my - s * 0.05) + ' ' + (mx - s * 0.12) + ',' + (my + s * 0.32) + ' ' + (mx + s * 0.5) + ',' + (my - s * 0.42) + '" fill="none" stroke="' + color + '" stroke-width="' + lw + '" stroke-linecap="round"/>');
+        } else {
+          p.push('<line x1="' + (mx - s * 0.42) + '" y1="' + (my - s * 0.42) + '" x2="' + (mx + s * 0.42) + '" y2="' + (my + s * 0.42) + '" stroke="' + color + '" stroke-width="' + lw + '" stroke-linecap="round"/>');
+          p.push('<line x1="' + (mx + s * 0.42) + '" y1="' + (my - s * 0.42) + '" x2="' + (mx - s * 0.42) + '" y2="' + (my + s * 0.42) + '" stroke="' + color + '" stroke-width="' + lw + '" stroke-linecap="round"/>');
+        }
+      } else if (it.level === 'minor') {
+        p.push('<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + (w / 2 + lw * 1.6) + '" ry="' + (h / 2 + lw * 1.6) + '" fill="none" stroke="' + color + '" stroke-width="' + lw + '"/>');
+      } else {
+        p.push('<rect x="' + (x1 - lw) + '" y="' + (y1 - lw) + '" width="' + (w + lw * 2) + '" height="' + (h + lw * 2) + '" fill="none" stroke="' + color + '" stroke-width="' + lw + '" stroke-dasharray="' + (lw * 3) + ',' + (lw * 2.4) + '"/>');
+      }
+      // 题号牌同样画在框内右上角（与 canvas 版保持一致）
+      var sym2 = it.level === 'ok' ? '✔' : (it.level === 'wrong' ? '✘' : (it.level === 'minor' ? '○' : '?'));
+      var label = (it.fallback ? '未定位 ' : '') + it.no + ' ' + sym2;
+      var lay2 = badgeLayout(function (txt, fsz2) { return txt.length * fsz2 * 0.62; }, label, x1 - lw, y1 - lw, x2 + lw, y2 + lw, base, W0);
+      p.push('<rect x="' + lay2.rect.x + '" y="' + lay2.rect.y + '" width="' + lay2.rect.w + '" height="' + lay2.rect.h + '" fill="' + boxColor + '" stroke="#ffffff" stroke-width="' + Math.max(2, lw * 0.5) + '"/>');
+      p.push('<text x="' + (lay2.rect.x + 6) + '" y="' + (lay2.rect.y + lay2.th - 1) + '" font-family="Microsoft YaHei, sans-serif" font-size="' + lay2.fsz + '" font-weight="bold" fill="#ffffff">' + esc(label) + '</text>');
+    });
+    var okN = items.filter(function (i) { return i.level === 'ok'; }).length;
+    var rr = base * 0.055, sx = W - rr - base * 0.02, sy = rr + base * 0.02;
+    p.push('<circle cx="' + sx + '" cy="' + sy + '" r="' + rr + '" fill="none" stroke="#dc2626" stroke-width="' + lw * 1.2 + '"/>');
+    p.push('<text x="' + sx + '" y="' + (sy + rr * 0.3) + '" font-family="Microsoft YaHei, sans-serif" font-size="' + (rr * 0.8) + '" font-weight="bold" fill="#dc2626" text-anchor="middle">' + okN + '/' + items.length + '</text>');
+    p.push('</svg>');
+    return p.join('');
+  }
+  /* 自动把批注图存进项目文件夹：SVG 走工作台写文件接口（始终可用）；本机 OCR 在线时再存一份真 JPG */
+  async function saveMarkFiles(m) {
+    if (!m || !m.items || !m.items.length) return [];
+    var stamp = new Date().toISOString().replace(/[-:T]/g, '').replace(/\..*$/, '').slice(0, 14);
+    var dir = '批改标注图';
+    var saved = [];
+    try {
+      await fetch('/api/worktable/mkdir', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: dir })
+      });
+    } catch (e) { }
+    try {
+      var svgRel = dir + '/作业批改-标注-' + stamp + '.svg';
+      var r = await fetch('/api/worktable/write', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: svgRel, content: marksToSvg(m.items, m.dataUrl, m.w, m.h) })
+      });
+      if (r.ok) saved.push(svgRel);
+    } catch (e) { }
+    try {
+      var h = await ocrHealth();
+      if (h && h.ok) {
+        var jpgRel = dir + '/作业批改-标注-' + stamp + '.jpg';
+        var r2 = await fetch(ocrBase() + '/save', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: jpgRel, image: m.dataUrl })
+        });
+        if (r2.ok) saved.push(jpgRel);
+      }
+    } catch (e) { }
+    return saved;
+  }
+
+  /* 显示批注图 + 自动保存到项目文件夹 */
+  var lastMarkUrl = '';
+  var lastMarkMeta = null;
+  async function showAnnotation(m) {
+    var dataUrl = (typeof m === 'string') ? m : m.dataUrl;
+    lastMarkUrl = dataUrl;
+    lastMarkMeta = (typeof m === 'string') ? null : m;
+    $('markCard').classList.remove('hid');
+    var wrap = $('markWrap');
+    wrap.innerHTML = '';
+    var im = document.createElement('img');
+    im.src = dataUrl;
+    im.alt = '批改标注图';
+    im.style.cssText = 'width:100%;border-radius:10px;border:1px solid #e4eaf3;display:block';
+    wrap.appendChild(im);
+    // 在图上叠一层透明热区：点某道题的框 → 跳到这道题的答案与讲解
+    if (lastMarkMeta && lastMarkMeta.items) {
+      lastMarkMeta.items.forEach(function (it, i) {
+        var d = document.createElement('div');
+        d.className = 'hot';
+        d.style.left = (it.x1 * 100) + '%';
+        d.style.top = (it.y1 * 100) + '%';
+        d.style.width = ((it.x2 - it.x1) * 100) + '%';
+        d.style.height = ((it.y2 - it.y1) * 100) + '%';
+        d.setAttribute('data-jump', String(i));
+        d.title = '第 ' + it.no + ' 题 · ' + (LEVEL_TEXT[it.level] || '') + '　点击跳到答案与讲解';
+        wrap.appendChild(d);
+      });
+      $('markHint').textContent = '提示：把鼠标移到图上任意一道题的框内会高亮，点一下直接跳到这道题的「题目与答案 / 正误 / 知识点」。';
+    }
+    if (lastMarkMeta) {
+      $('markPath').textContent = '正在保存到项目文件夹…';
+      var saved = await saveMarkFiles(lastMarkMeta);
+      $('markPath').textContent = saved.length
+        ? ('已保存到项目文件夹：' + saved.join('、') + '（也可点「下载批注图」存到浏览器下载目录）')
+        : '（自动保存失败，可点「下载批注图」存到浏览器下载目录）';
+    }
+  }
+  /* 跳到某道题的答案与讲解（三段一起高亮） */
+  function jumpToQuestion(i) {
+    var el = $('qa-' + i);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    ['qa-', 'jd-', 'kp-'].forEach(function (pfx) {
+      var n = $(pfx + i);
+      if (!n) return;
+      n.classList.add('flash');
+      setTimeout(function () { n.classList.remove('flash'); }, 2400);
+    });
+  }
+
+  /* 调模型拿坐标（失败原因要看得见）
+     —— 必须用 standalone：只发定位指令。否则模型会照"批改格式"返回 questions，拿不到坐标 */
+  async function locateOnce(qs, dataUrl) {
+    var raw = await callModel(locatePrompt(0, 1, qs), true, false, dataUrl, true);
+    var json = extractJson(raw);
+    var boxes = parseBoxes(json, qs);
+    var got = Object.keys(boxes);
+    var note = '';
+    if (!got.length) {
+      note = (json && json.questions) ? '模型返回的是批改结果而非坐标（指令被带跑了）' : '模型没返回可用坐标';
+    }
+    return { boxes: boxes, count: got.length, keys: got, note: note };
+  }
+  /* 逐张照片定位：先常规问一次，命中不全就用"照抄题号"的强约束再问一次 */
+  async function locateForPhoto(qs, dataUrl, onStep) {
+    var best = { boxes: {}, count: 0, keys: [] };
+    var attempts = [];
+    for (var a = 0; a < 2; a++) {
+      var res;
+      try {
+        res = await locateOnce(qs, dataUrl);
+        if (a === 1) {
+          // 第二次：把每道题的框按题号逐个问一遍（更慢但更准）
+          res = await locateOneByOne(qs, dataUrl, onStep);
+        }
+      } catch (e) {
+        attempts.push('第' + (a + 1) + '次定位失败：' + ((e && e.message) || e));
+        continue;
+      }
+      if (res.count > best.count) best = res;
+      if (res.count >= qs.length) break;
+      attempts.push('第' + (a + 1) + '次只拿到 ' + res.count + '/' + qs.length + ' 个框' + (res.note ? '（' + res.note + '）' : ''));
+    }
+    best.attempts = attempts;
+    return best;
+  }
+  /* 兜底：一道题一道题地问（每题单独一次请求，最稳但最慢；只对没定位到的题用） */
+  async function locateOneByOne(qs, dataUrl, onStep) {
+    var boxes = {}, miss = [];
+    // 先整页问一次拿多数题，再对漏掉的单独问
+    try {
+      var first = await locateOnce(qs, dataUrl);
+      boxes = first.boxes || {};
+      if (first.count >= qs.length) return { boxes: boxes, count: first.count, keys: Object.keys(boxes) };
+    } catch (e) { }
+    qs.forEach(function (q) { if (!lookupBox(boxes, q.no)) miss.push(q); });
+    for (var i = 0; i < miss.length; i++) {
+      var q = miss[i];
+      if (onStep) onStep('正在单独定位「' + q.no + '」（' + (i + 1) + '/' + miss.length + '）…');
+      try {
+        var raw = await callModel([
+          '【单题定位】只看这一道题：' + q.no,
+          '请给出这道题「学生手写作答区域」在图上的外接矩形，用归一化坐标（相对整张图，左上角 0,0，右下角 1,1）。',
+          '坐标要贴住手写内容。只输出一个 JSON 对象，不要解释、不要输出批改结果：',
+          '{"no":"' + q.no + '","x1":0.1,"y1":0.2,"x2":0.5,"y2":0.4}'
+        ].join('\n'), true, false, dataUrl, true);
+        var one = parseBoxes(extractJson(raw), [q]);
+        var b = lookupBox(one, q.no) || (Object.keys(one).length ? one[Object.keys(one)[0]] : null);
+        if (b) boxes[q.no] = b;
+      } catch (e) { }
+    }
+    return { boxes: boxes, count: Object.keys(boxes).length, keys: Object.keys(boxes) };
+  }
+  /* 框的合理性检查：相对同页其它框判断（单栏试卷的框本来就占满整行宽度，不能按绝对宽度判定）
+     框比别的题高太多 / 明显偏小 / 与相邻题重叠大半 → 可疑，需要单独重定位 */
+  function suspectBoxes(boxes, qs) {
+    var arr = qs.map(function (q) { return { no: q.no, b: lookupBox(boxes, q.no) }; }).filter(function (x) { return x.b; });
+    if (arr.length < 2) return {};
+    var hs = arr.map(function (x) { return x.b.y2 - x.b.y1; }).sort(function (a, b) { return a - b; });
+    var med = hs[Math.floor(hs.length / 2)] || 0.1;
+    var bad = {};
+    arr.forEach(function (x) {
+      var w = x.b.x2 - x.b.x1, h = x.b.y2 - x.b.y1;
+      if (h > Math.max(0.34, med * 2.6)) bad[x.no] = '框比其它题高太多（可能框住了页眉/姓名行）';
+      else if (h < med * 0.34) bad[x.no] = '框明显偏小';
+      else if (w * h > 0.32) bad[x.no] = '框占了近半页';
+    });
+    for (var i = 0; i < arr.length; i++) {
+      for (var j = i + 1; j < arr.length; j++) {
+        var a = arr[i].b, c = arr[j].b;
+        var ix = Math.max(0, Math.min(a.x2, c.x2) - Math.max(a.x1, c.x1));
+        var iy = Math.max(0, Math.min(a.y2, c.y2) - Math.max(a.y1, c.y1));
+        var inter = ix * iy;
+        var small = Math.min((a.x2 - a.x1) * (a.y2 - a.y1), (c.x2 - c.x1) * (c.y2 - c.y1)) || 1;
+        if (inter / small > 0.5) { bad[arr[i].no] = '与相邻题重叠大半'; bad[arr[j].no] = '与相邻题重叠大半'; }
+      }
+    }
+    return bad;
+  }
+  /* 用本机 OCR 的行坐标找"印刷题号"锚点（不依赖大模型，用来补定/校验） */
+  /* 从一行文字里认出"印刷题号"：19. / 19、/ 单独一行 19 / 19 题干… / 19x（带少量噪声） */
+  function anchorNoOf(text) {
+    var t = String(text == null ? '' : text).trim();
+    var m = /^[（(]?\s*(\d{1,3})\s*[.、．)）]/.exec(t);
+    if (m) return m[1];
+    m = /^(\d{1,3})\s*$/.exec(t);
+    if (m) return m[1];
+    m = /^(\d{1,3})\s+\S/.exec(t);
+    if (m) return m[1];
+    m = /^(\d{1,3})\s*[^\d\s]{1,2}$/.exec(t);
+    if (m) return m[1];
+    return '';
+  }
+  async function ocrAnchors(dataUrl) {
+    try {
+      var h = await ocrHealth();
+      if (!h || !h.ok) return null;
+      var r = await fetch(ocrBase() + '/ocr', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image: dataUrl })
+      });
+      if (!r.ok) return null;
+      var d = await r.json();
+      if (!d.ok || !d.lines || !d.lines.length) return null;
+      var im = await loadImg(dataUrl);
+      var W = im.naturalWidth, H = im.naturalHeight;
+      var lines = [];
+      d.lines.forEach(function (l) {
+        var xs = (l.box || []).map(function (p) { return p[0]; });
+        var ys = (l.box || []).map(function (p) { return p[1]; });
+        if (!xs.length || !ys.length) return;
+        lines.push({
+          text: String(l.text || '').trim(),
+          x1: Math.min.apply(null, xs) / W, x2: Math.max.apply(null, xs) / W,
+          y1: Math.min.apply(null, ys) / H, y2: Math.max.apply(null, ys) / H
+        });
+      });
+      var anchors = {};
+      lines.forEach(function (l) {
+        var no = anchorNoOf(l.text);
+        if (no && (!anchors[no] || l.y1 < anchors[no].y1)) anchors[no] = l;
+      });
+      return { anchors: anchors, lines: lines };
+    } catch (e) {
+      return null;
+    }
+  }
+  /* 用锚点行推出一道题的框：从该题号行开始，到下一个题号行之前结束 */
+  function boxFromAnchor(no, anchors, lines) {
+    var a = anchors[String(no)];
+    if (!a) return null;
+    var nextY = 1;
+    Object.keys(anchors).forEach(function (k) {
+      var l = anchors[k];
+      if (l.y1 > a.y1 + 0.005 && l.y1 < nextY) nextY = l.y1;
+    });
+    var y1 = Math.max(0, a.y1 - 0.006);
+    var y2 = Math.min(1, Math.max(a.y2 + 0.02, nextY - 0.004));
+    var x2 = a.x2;
+    (lines || []).forEach(function (l) {
+      var cy = (l.y1 + l.y2) / 2;
+      if (cy >= y1 && cy <= y2 && l.x2 > x2) x2 = l.x2;
+    });
+    return { x1: Math.min(0.03, a.x1), y1: y1, x2: Math.min(0.995, x2 + 0.01), y2: y2, fromOcr: true };
+  }
+  /* 本题没有锚点、但前后两题都有：用它俩把这道题的位置"夹"出来 */
+  function inferBoxBetween(no, anchors, lines) {
+    var n = parseInt((noKey(String(no)).split('-')[0]) || '0', 10);
+    if (!n) return null;
+    var prev = anchors[String(n - 1)], next = anchors[String(n + 1)];
+    if (!prev || !next || next.y1 <= prev.y2) return null;
+    var y1 = prev.y2 + 0.008, y2 = next.y1 - 0.004;
+    if (y2 - y1 < 0.012) return null;
+    var x2 = 0.5;
+    (lines || []).forEach(function (l) {
+      var cy = (l.y1 + l.y2) / 2;
+      if (cy >= y1 && cy <= y2 && l.x2 > x2) x2 = l.x2;
+    });
+    return { x1: 0.03, y1: y1, x2: Math.min(0.995, x2 + 0.01), y2: y2, fromOcr: true, inferred: true };
+  }
+  /* 纯逻辑：按"每张裁切图上读到的题号"把框重新挂到正确的题上（读到 header 的框丢弃） */
+  function remapBySeen(qs, entries, items, oldBoxes) {
+    var bySeen = {}, headerBoxes = 0, claimed = [];
+    (items || []).forEach(function (it, k) {
+      var e = entries[k];
+      if (!e) return;
+      var raw = String(it && it.no != null ? it.no : '').trim();
+      if (/header|页眉|姓名|班级|学校|校名|考号|标题/i.test(raw)) { headerBoxes++; return; }
+      var no = anchorNoOf(raw) || raw.replace(/[^\d]/g, '');
+      if (!no) return;
+      for (var z = 0; z < qs.length; z++) {
+        if (noKey(qs[z].no) === noKey(no)) {
+          if (!bySeen[qs[z].no]) { bySeen[qs[z].no] = e.b; claimed.push(e.b); }
+          return;
+        }
+      }
+    });
+    var boxes = {}, matched = 0, moved = 0;
+    qs.forEach(function (q) {
+      var nb = bySeen[q.no];
+      if (!nb) {
+        var ob = lookupBox(oldBoxes, q.no);
+        // 原框若已被别的题认领（说明它其实属于那一题），就不要留在这里
+        if (ob && claimed.indexOf(ob) < 0) boxes[q.no] = ob;
+        return;
+      }
+      var old = lookupBox(oldBoxes, q.no);
+      boxes[q.no] = nb;
+      matched++;
+      if (!old || Math.abs(old.y1 - nb.y1) > 0.004 || Math.abs(old.y2 - nb.y2) > 0.004) moved++;
+    });
+    return { boxes: boxes, matched: matched, moved: moved, headerBoxes: headerBoxes };
+  }
+  /* 用"读每个框里的印刷题号"把框与题号重新对齐：
+     能自动纠正「第一题框到页眉/姓名栏」「整体错行一行」，不依赖本机 OCR */
+  async function realignBoxes(qs, locs) {
+    if (!locs || !locs[0] || !photos.length) return locs;
+    var boxes = locs[0].boxes || {};
+    var entries = [];
+    qs.forEach(function (q) {
+      var b = lookupBox(boxes, q.no);
+      if (b) entries.push({ q: q, b: b });
+    });
+    if (entries.length < 2) return locs;
+    entries.sort(function (a, b) { return a.b.y1 - b.b.y1; });      // 按纵向顺序裁切
+    $('progTxt').textContent = '正在逐个框核对题号（共 ' + entries.length + ' 个，分批进行）…';
+    // 分批（每批最多 8 张），避免一次请求过大被接口拒收
+    var items = [], got = 0, CHUNK = 8;
+    for (var s = 0; s < entries.length; s += CHUNK) {
+      var group = [];
+      for (var g = s; g < Math.min(s + CHUNK, entries.length); g++) {
+        try {
+          var cu = await cropZoom(photos[0].dataUrl, entries[g].b, 1.6);
+          group.push({ idx: g, url: cu });
+        } catch (e) { }
+      }
+      if (!group.length) continue;
+      $('progTxt').textContent = '正在核对题号（' + (s + 1) + '~' + Math.min(s + CHUNK, entries.length) + ' / ' + entries.length + '）…';
+      var content = group.map(function (x) { return { type: 'image_url', image_url: { url: x.url } }; });
+      content.push({
+        type: 'text', text: '下面按从上到下的顺序给出同一页作业里的 ' + group.length + ' 个裁切图。\n'
+          + '请对每一张只回答一个问题：图上印着的**题号**是什么（照抄图上的写法，如 1 / 2. / (3) / 例4）；\n'
+          + '如果这张图上是姓名、班级、学校、考号、标题或页眉，就回答 header。\n'
+          + '只输出 JSON（按给的顺序输出 ' + group.length + ' 条）：{"items":[{"no":"..."}]}'
+      });
+      try {
+        var out = extractJson(await postChat(channels()[0], {
+          model: readSettings().model,
+          messages: [{ role: 'user', content: content }],
+          temperature: 0.1,
+          max_tokens: 1200
+        }));
+        ((out && out.items) || []).forEach(function (it, k) {
+          if (group[k] && items[group[k].idx] == null) { items[group[k].idx] = it; got++; }
+        });
+      } catch (e) { }
+    }
+    if (got < Math.max(2, Math.floor(entries.length * 0.5))) return locs;   // 读出太少就不动，别瞎改
+    // 按"读到的题号"重新挂框（读到 header 的框会被丢弃）
+    var ordered = entries.map(function (e) { return { b: e.b }; });
+    var rm = remapBySeen(qs, ordered, items, boxes);
+    var boxes2 = rm.boxes, matched = rm.matched, moved = rm.moved, headerBoxes = rm.headerBoxes;
+    // 仍然缺的题：用相邻已确认的框接/夹出来
+    var known = qs.map(function (q) { return { no: q.no, b: lookupBox(boxes2, q.no) }; }).filter(function (x) { return x.b; });
+    if (known.length) {
+      qs.forEach(function (q) {
+        if (lookupBox(boxes2, q.no)) return;
+        var n = parseInt((noKey(q.no).split('-')[0]) || '0', 10);
+        if (!n) return;
+        var prev = null, next = null;
+        known.forEach(function (x) {
+          var xn = parseInt((noKey(x.no).split('-')[0]) || '0', 10);
+          if (xn === n - 1) prev = x.b;
+          if (xn === n + 1) next = x.b;
+        });
+        if (prev && next && next.y1 > prev.y2 + 0.008) {
+          boxes2[q.no] = { x1: Math.min(prev.x1, next.x1), y1: prev.y2 + 0.004, x2: Math.max(prev.x2, next.x2), y2: next.y1 - 0.004, inferred: true };
+        } else if (prev) {
+          var hh = Math.max(0.02, prev.y2 - prev.y1);
+          boxes2[q.no] = { x1: prev.x1, y1: prev.y2 + 0.004, x2: prev.x2, y2: Math.min(0.998, prev.y2 + 0.004 + hh), inferred: true };
+        }
+      });
+    }
+    locs[0].boxes = boxes2;
+    locs[0].verified = matched;
+    locs[0].headerBoxes = headerBoxes;
+    locs[0].realigned = moved;
+    return locs;
+  }
+  /* 定位每张照片上各题的区域（批注和精读都要用）；可疑的框会单独重新定位 */
+  async function locateAllPhotos(qs) {
+    var locs = [];
+    for (var i = 0; i < photos.length; i++) {
+      $('progTxt').textContent = photos.length > 1 ? ('正在定位第 ' + (i + 1) + '/' + photos.length + ' 张照片上的题目位置…') : '正在定位每道题的位置…';
+      $('progBar').style.width = '78%';
+      var res = { boxes: {}, attempts: [] };
+      try {
+        res = await locateForPhoto(qs, photos[i].dataUrl, function (t) { $('progTxt').textContent = t; });
+      } catch (e) {
+        res.attempts.push('定位整体失败：' + ((e && e.message) || e));
+      }
+      // 合理性检查：可疑的框（框住页眉、跨题、过大过小）单独重新定位
+      var bad = suspectBoxes(res.boxes || {}, qs);
+      var badNos = Object.keys(bad);
+      if (badNos.length) {
+        if (!res.attempts) res.attempts = [];
+        res.attempts.push('可疑框 ' + badNos.length + ' 个（' + badNos.map(function (n) { return n + ':' + bad[n]; }).join('、') + '），已单独重定位');
+        for (var k = 0; k < badNos.length; k++) {
+          var q = null;
+          for (var z = 0; z < qs.length; z++) { if (noKey(qs[z].no) === noKey(badNos[k])) { q = qs[z]; break; } }
+          if (!q) continue;
+          try {
+            if (res.boxes) delete res.boxes[q.no];
+            var one = await locateOneByOne([q], photos[i].dataUrl, function (t) { $('progTxt').textContent = t; });
+            var nb = lookupBox(one.boxes || {}, q.no);
+            if (nb) res.boxes[q.no] = nb;
+          } catch (e) { }
+        }
+      }
+      // 本机 OCR 兜底 + 校验：用"印刷题号"的行坐标补出没定位到的框，并纠正明显错位的框
+      var missList = qs.filter(function (q) { return !lookupBox(res.boxes, q.no); });
+      if (missList.length) $('progTxt').textContent = '有 ' + missList.length + ' 题没定位到，正在用本机 OCR 找题号锚点…';
+      var ocr = await ocrAnchors(photos[i].dataUrl);
+      if (ocr && Object.keys(ocr.anchors).length) {
+        var fixedN = 0, fixPos = 0;
+        missList.forEach(function (q) {
+          var b = boxFromAnchor(q.no, ocr.anchors, ocr.lines) || inferBoxBetween(q.no, ocr.anchors, ocr.lines);
+          if (b) { res.boxes[q.no] = b; fixedN++; }
+        });
+        // 校验：已有的框如果没把该题的题号行包进去，说明框错位 → 用锚点框替换
+        qs.forEach(function (q) {
+          var b = lookupBox(res.boxes, q.no);
+          var a = ocr.anchors[String(q.no).trim()] || ocr.anchors[String(noKey(q.no))];
+          if (!b || !a || b.fromOcr) return;
+          var cy = (a.y1 + a.y2) / 2;
+          var inY = cy >= b.y1 - 0.01 && cy <= b.y2 + 0.01;
+          var inX = a.x1 >= b.x1 - 0.04 && a.x1 <= b.x2 + 0.04;
+          if (!inY || !inX) {
+            var nb2 = boxFromAnchor(q.no, ocr.anchors, ocr.lines);
+            if (nb2) { res.boxes[q.no] = nb2; fixPos++; }
+          }
+        });
+        var notes = [];
+        if (fixedN) notes.push('OCR 题号锚点补定位 ' + fixedN + '/' + missList.length + ' 题');
+        if (fixPos) notes.push('OCR 题号锚点纠正错位框 ' + fixPos + ' 个');
+        if (notes.length) res.attempts.push(notes.join('，'));
+      } else if (!ocr && missList.length) {
+        res.attempts.push('本机 OCR 未启动，无法用题号锚点补定位（双击「作业批改-启动OCR.bat」可显著改善）');
+      }
+      locs.push(res);
+    }
+    return locs;
+  }
+  /* 裁切 + 放大（精读用；字放大后手写字母认得更准） */
+  async function cropZoom(dataUrl, box, zoom) {
+    var im = await loadImg(dataUrl);
+    var W = im.naturalWidth, H = im.naturalHeight;
+    var px = (box.x2 - box.x1) * 0.05, py = (box.y2 - box.y1) * 0.08;
+    var x = Math.max(0, (box.x1 - px) * W), y = Math.max(0, (box.y1 - py) * H);
+    var w = Math.min(W - x, (box.x2 - box.x1 + px * 2) * W), h = Math.min(H - y, (box.y2 - box.y1 + py * 2) * H);
+    var cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.round(w * (zoom || 2)));
+    cv.height = Math.max(1, Math.round(h * (zoom || 2)));
+    var g = cv.getContext('2d');
+    g.imageSmoothingEnabled = true;
+    if ('imageSmoothingQuality' in g) g.imageSmoothingQuality = 'high';
+    g.drawImage(im, x, y, w, h, 0, 0, cv.width, cv.height);
+    return cv.toDataURL('image/jpeg', 0.92);
+  }
+  /* 按题精读：先把每道题裁切放大 2× 只做"逐字转写"（转写比整页准）；
+     再对"读法与第一遍不一致"的题，用放大图单独重判一次（读法可靠了，判卷才可信） */
+  async function refineWithCrops(qs, locs) {
+    if (!photos.length || !qs.length) return null;
+    var crops = [], order = [], cropOf = {};
+    var boxes = (locs && locs[0] && locs[0].boxes) || {};
+    for (var i = 0; i < qs.length; i++) {
+      var b = lookupBox(boxes, qs[i].no);
+      if (!b) continue;
+      try {
+        var cu = await cropZoom(photos[0].dataUrl, b, 2);
+        crops.push(cu);
+        order.push(qs[i].no);
+        cropOf[String(qs[i].no).trim()] = cu;
+      } catch (e) { }
+    }
+    if (!crops.length) return null;
+    $('progTxt').textContent = '正在按题放大精读（' + crops.length + ' 题，字放大 2 倍）…';
+    $('progBar').style.width = '86%';
+    var text = ['【按题精读 · 只转写手写】下面按顺序给出同一页作业里每道题的放大裁切图（字已放大 2 倍），顺序为：' + order.join('、') + '。',
+      '请对每一张图：',
+      '① 读出**这张图上实际印着的题号**（照抄图上的写法，如 1 / 2 / (3) / 例4；如果这张图上是姓名、班级、标题、页眉，就写 header）；',
+      '② **只转写学生的手写笔迹**（印刷题目、图形标注、教辅印刷答案都不要转写），保持原有的行结构。',
+      '角标字母和符号（∠、△、∥、∵、∴、DGC、AGC 这类）必须逐字看清，看不清写「?」。',
+      '只转写、只读题号，不要判卷、不要解释。只输出 JSON（按给的图片顺序输出 ' + order.length + ' 条）：',
+      '{"items":[{"no":"图上实际印着的题号或 header","transcript":"只含学生手写的转写文本"}]}'
+    ].join('\n');
+    var content = crops.map(function (u) { return { type: 'image_url', image_url: { url: u } }; });
+    content.push({ type: 'text', text: text });
+    var tw = extractJson(await postChat(channels()[0], {
+      model: readSettings().model,
+      messages: [{ role: 'user', content: content }],
+      temperature: 0.1,
+      max_tokens: 3000
+    }));
+    var items = (tw && tw.items) || [];
+    if (!items.length) return null;
+    // 按位置对应回题号（模型是按给的顺序回答的）；数量对不上时退回按题号匹配
+    var byPos = items.length === order.length;
+    function intendedFor(it, idx) {
+      var want = byPos ? order[idx] : String(it.no == null ? '' : it.no);
+      for (var z = 0; z < qs.length; z++) { if (noKey(qs[z].no) === noKey(want)) return qs[z]; }
+      return null;
+    }
+    // 核实：图上印着的题号 vs 我们以为的题号；对不上（或裁到页眉）→ 单独重新定位 + 重新裁切转写
+    var mismatched = [];
+    for (var v = 0; v < items.length; v++) {
+      var qv = intendedFor(items[v], v);
+      if (!qv) continue;
+      var seen = String(items[v].no == null ? '' : items[v].no).trim();
+      var tr = String(items[v].transcript || '');
+      var isHeader = /header|页眉|姓名|班级|学号|^name\b|class\s*[:：]/i.test(seen) || (/姓名|班级|学号/.test(tr) && tr.length < 40);
+      if (isHeader) mismatched.push({ q: qv, why: '裁到的是页眉/姓名行' });
+      else if (noKey(seen) && noKey(seen) !== noKey(qv.no)) mismatched.push({ q: qv, why: '图上题号是 ' + seen + '，不是 ' + qv.no });
+    }
+    if (mismatched.length) {
+      $('progTxt').textContent = '发现 ' + mismatched.length + ' 个框和题号对不上，正在重新定位…';
+      var fixed = {};
+      for (var w2 = 0; w2 < mismatched.length; w2++) {
+        var mq = mismatched[w2].q;
+        try {
+          var one2 = await locateOneByOne([mq], photos[0].dataUrl, function (t) { $('progTxt').textContent = t; });
+          var nb = lookupBox(one2.boxes || {}, mq.no);
+          if (nb) {
+            if (locs && locs[0]) locs[0].boxes[mq.no] = nb;      // 修正定位，批注也用这个
+            var ncu = await cropZoom(photos[0].dataUrl, nb, 2);
+            cropOf[String(mq.no).trim()] = ncu;
+            var re = extractJson(await postChat(channels()[0], {
+              model: readSettings().model,
+              messages: [{
+                role: 'user', content: [
+                  { type: 'image_url', image_url: { url: ncu } },
+                  { type: 'text', text: '这是「' + mq.no + '」这道题的放大裁切图。请只转写学生的手写内容（不要转写印刷题目），逐字看清字母与符号。\n只输出 JSON：{"no":"' + mq.no + '","transcript":""}' }
+                ]
+              }],
+              temperature: 0.1, max_tokens: 1200
+            }));
+            fixed[noKey(mq.no)] = String(re.transcript || '').trim();
+            say('「' + mq.no + '」的框原来不对（' + mismatched[w2].why + '），已重新定位并重读。', 'ok');
+          }
+        } catch (e) { }
+      }
+      // 把重新读到的转写替换回对应项
+      for (var v2 = 0; v2 < items.length; v2++) {
+        var qv2 = intendedFor(items[v2], v2);
+        if (!qv2) continue;
+        var k2 = noKey(qv2.no);
+        if (Object.prototype.hasOwnProperty.call(fixed, k2)) items[v2].transcript = fixed[k2];
+      }
+    }
+
+    // 找出"读法不一致"的题 → 用放大图聚焦重判
+    var out = { items: [], rejudged: 0, mismatched: mismatched.length };
+    for (var k = 0; k < items.length; k++) {
+      var it = items[k];
+      if (!it) continue;
+      var q = intendedFor(it, k);
+      if (!q) continue;
+      var no = String(q.no);
+      var fresh = String(it.transcript || '').trim();
+      var same = sameKeyContent(q.studentAnswer, fresh);
+      if (same) {
+        out.items.push({ no: q.no, transcript: fresh });      // 读法一致：不动判定
+        continue;
+      }
+      var crop = cropOf[String(q.no).trim()] || cropOf[no];
+      var refixed = null;
+      if (crop) {
+        try {
+          var one = extractJson(await postChat(channels()[0], {
+            model: readSettings().model,
+            messages: [{
+              role: 'user', content: [
+                { type: 'image_url', image_url: { url: crop } },
+                {
+                  type: 'text', text: ['【单题重判】这是「' + q.no + '」这道题的放大截图，学生的作答以这张图为准（比整页照片清楚）。',
+                    '① 逐字转写学生的手写内容；② 判定对错；③ 判错时指出具体错在哪一步并给正确答案。',
+                    '注意：最终答案与正确答案数值相同时判「正确」；看不清就写「存疑」。',
+                    '只输出 JSON：{"no":"' + q.no + '","transcript":"","isCorrect":true,"verdict":"","errorReason":"","correctAnswer":"","confidence":""}'
+                  ].join('\n')
+                }
+              ]
+            }],
+            temperature: 0.15,
+            max_tokens: 1500
+          }));
+          out.rejudged++;
+          refixed = one;
+        } catch (e) { }
+      }
+      out.items.push({
+        no: q.no,
+        transcript: fresh,
+        isCorrect: refixed ? refixed.isCorrect === true : undefined,
+        verdict: refixed ? refixed.verdict : '',
+        errorReason: refixed ? refixed.errorReason : '',
+        correctAnswer: refixed ? refixed.correctAnswer : '',
+        confidence: refixed ? refixed.confidence : '',
+        refixed: !!refixed
+      });
+      say('「' + q.no + '」两遍读法不一致，已用放大图重新判卷。', 'ok');
+    }
+    return out;
+  }
+  /* 把精读结果并回批改结果
+     规则：读法一致的题→判定不动（只采纳更清晰的转写）；
+           读法不一致的题→已用放大图重判，采纳重判结论（读法已可靠） */
+  function mergeRefined(result, json) {
+    var items = (json && json.items) || [];
+    if (!items.length) return result;
+    var byNo = {};
+    items.forEach(function (it) { if (it && it.no != null) byNo[noKey(it.no)] = it; });
+    var changed = 0, rejudged = 0;
+    result.questions.forEach(function (q) {
+      var m = byNo[noKey(q.no)];
+      if (!m) return;
+      var fresh = String(m.transcript || '').trim();
+      var stable = sameKeyContent(q.studentAnswer, fresh);
+      if (m.confidence) q.confidence = m.confidence;
+      if (stable) {
+        if (fresh && !q.isCorrect) q.studentAnswer = fresh;   // 转写更清晰就采纳，判定不动
+        return;
+      }
+      // 读法不一致：以放大重判结论为准
+      if (fresh) q.studentAnswer = fresh;
+      q.refinedReading = true;
+      if (m.isCorrect === true) {
+        if (!q.isCorrect) changed++;
+        q.isCorrect = true;
+        q.pending = false;
+        q.verdict = '正确（放大精读后重判）';
+        q.errorReason = '第一遍识别有误，按放大精读后的原文重判为正确。';
+        if (m.correctAnswer) q.correctAnswer = m.correctAnswer;
+        rejudged++;
+      } else if (m.isCorrect === false) {
+        if (q.isCorrect) changed++;
+        q.isCorrect = false;
+        q.pending = false;
+        q.verdict = (m.verdict && /部分正确/.test(String(m.verdict))) ? '部分正确' : '错误（放大精读后重判）';
+        q.errorReason = m.errorReason && m.errorReason !== '无' ? m.errorReason : q.errorReason;
+        if (m.correctAnswer) q.correctAnswer = m.correctAnswer;
+        rejudged++;
+      } else {
+        // 重判没成功 → 保守处理：存疑、不计错
+        q.isCorrect = false;
+        q.pending = true;
+        q.verdict = '存疑（两次识别不一致）';
+        q.errorReason = '第一次读到「' + String(q.studentAnswer || '').slice(0, 60) + '」，放大精读读到「' + fresh.slice(0, 60)
+          + '」。两次识别不一致，本题不计入错误；可点右边「✎ 手写识别错了？点这里修正」按原文改一下再重判。';
+        changed++;
+      }
+    });
+    result.refined = true;
+    result.refinedChanged = changed;
+    result.refinedRejudged = rejudged;
+    result.refinedMismatched = (json && json.mismatched) || 0;
+    recount(result);
+    return result;
+  }
+  function recount(result) {
+    var qs = result.questions || [];
+    var correct = qs.filter(function (q) { return q.isCorrect; }).length;
+    var pending = qs.filter(function (q) { return !q.isCorrect && q.pending; }).length;
+    result.overall.correct = correct;
+    result.overall.pending = pending;
+    result.overall.wrong = qs.length - correct - pending;
+    result.overall.scoreText = '对 ' + correct + ' 题 / 共 ' + qs.length + ' 题' + (pending ? '（' + pending + ' 题未作答或存疑，未计入错误）' : '');
+  }
+
+  /* 纯逻辑：还有题没框时，用前后相邻题的框把它位置推出来（返回补了几个）
+     推出来的框高度以"已确定框的中位高度"为上限，避免最后一两题被撑得特别大 */
+  function fillMissingByNeighbors(qs, plan, gap) {
+    gap = gap || 0.006;
+    var hs = [];
+    (plan || []).forEach(function (b) { if (b) hs.push(b.y2 - b.y1); });
+    hs.sort(function (a, b) { return a - b; });
+    var medH = hs.length ? hs[Math.floor(hs.length / 2)] : 0.04;
+    var maxH = Math.max(0.02, medH * 1.25);        // 最多比中位高度高 25%
+    var minH = Math.max(0.014, medH * 0.6);
+    var bottomLimit = 0.975;                       // 页面底部 2.5% 留给页脚/水印
+    var filled = 0;
+    (qs || []).forEach(function (q, k) {
+      if (plan[k]) return;
+      var prev = null, next = null;
+      for (var a = k - 1; a >= 0; a--) { if (plan[a]) { prev = plan[a]; break; } }
+      for (var b = k + 1; b < qs.length; b++) { if (plan[b]) { next = plan[b]; break; } }
+      if (!prev && !next) return;
+      var rawH = prev ? (prev.y2 - prev.y1) : (next.y2 - next.y1);
+      var h = Math.min(Math.max(rawH, minH), maxH);
+      var y1 = prev ? prev.y2 + gap : Math.max(0.02, next.y1 - gap - h);
+      var y2 = next ? Math.min(next.y1 - gap, y1 + h) : Math.min(bottomLimit, y1 + h);
+      if (y2 - y1 < 0.012) { y1 = prev ? prev.y2 + gap : y1; y2 = Math.min(bottomLimit, y1 + Math.max(0.02, h)); }
+      plan[k] = {
+        x1: prev ? prev.x1 : next.x1, y1: y1,
+        x2: prev ? prev.x2 : next.x2, y2: y2,
+        inferred: true, fromNeighbor: true
+      };
+      filled++;
+    });
+    return filled;
+  }
+
+  async function buildAnnotation(locs) {
+    if (!result || !photos.length) return null;
+    var qs = result.questions || [];
+    if (!qs.length) return null;
+    if (!locs) locs = await locateAllPhotos(qs);
+    var out = [], located = 0, total = 0, notes = [], lastMeta = null;
+    for (var i = 0; i < photos.length; i++) {
+      $('progTxt').textContent = '正在生成原图批注…';
+      $('progBar').style.width = '94%';
+      var res = locs[i] || { boxes: {}, attempts: [] };
+      var boxes = res.boxes || {};
+      if (res.attempts && res.attempts.length) notes.push('图' + (i + 1) + '：' + res.attempts.join('；'));
+      var im = await loadImg(photos[i].dataUrl);
+      // 先解析出每题的框；仍缺的题先用"前后相邻题的框"推位置，最后才进兜底列
+      var plan = qs.map(function (q) { return lookupBox(boxes, q.no); });
+      // ① 先温和收敛"明显比别的题大"的框（超过中位高度 2.5 倍的，裁掉多余下沿，避免连到页脚）
+      var hh = [];
+      plan.forEach(function (b) { if (b) hh.push(b.y2 - b.y1); });
+      hh.sort(function (a, b) { return a - b; });
+      var medH2 = hh.length ? hh[Math.floor(hh.length / 2)] : 0.05;
+      plan.forEach(function (b) {
+        if (!b) return;
+        var lim = Math.max(0.03, medH2 * 2.5);
+        if (b.y2 - b.y1 > lim) b.y2 = Math.min(b.y2, b.y1 + lim);
+        if (b.y2 > 0.975) b.y2 = 0.975;
+      });
+      // ② 还缺的题用相邻框推位置
+      fillMissingByNeighbors(qs, plan, 0.006);
+      var items = [], fbIndex = 0;
+      qs.forEach(function (q, k) {
+        total++;
+        var b = plan[k];
+        var isFallback = false;
+        if (!b) {
+          // 连相邻题都没有框（极罕见）→ 兜底列：从 18% 处紧凑堆叠，避开顶部页眉
+          var rowH = Math.min(0.5 / Math.max(qs.length, 1), 0.065);
+          var top = 0.18 + fbIndex * (rowH + 0.008);
+          if (top + rowH > 0.985) top = 0.985 - rowH;
+          b = { x1: 0.86, y1: top, x2: 0.995, y2: top + rowH };
+          isFallback = true;
+          fbIndex++;
+        } else located++;
+        items.push({ no: q.no, level: markLevel(q), x1: b.x1, y1: b.y1, x2: b.x2, y2: b.y2, fallback: isFallback, inferred: !!b.inferred });
+      });
+      var url = drawMarks(im, items);
+      out.push(url);
+      if (i === 0) lastMeta = { dataUrl: url, items: items, w: im.naturalWidth, h: im.naturalHeight };
+    }
+    say('原图批注：' + located + '/' + total + ' 个标记打在了题目作答区上'
+      + (located < total ? ('；有 ' + (total - located) + ' 题没定位到，只能在右侧空白处兜底（标签带「未定位」）') : '')
+      + (notes.length ? ('｜' + notes.join('｜')) : ''), located === total ? 'ok' : 'bad');
+    return lastMeta;
+  }
+
+  /* ---------------- 本机离线 OCR（可选前置步骤） ---------------- */
+  function ocrBase() {
+    var s = readSettings();
+    return String(s.ocrUrl || DEFAULT_SETTINGS.ocrUrl || '').replace(/\/+$/, '');
+  }
+  async function ocrHealth() {
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, 3000);
+    try {
+      var r = await fetch(ocrBase() + '/health', { cache: 'no-store', signal: ctl.signal });
+      if (!r.ok) return null;
+      return await r.json();
+    } catch (e) {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  async function ocrProbe() {
+    var h = await ocrHealth();
+    if (h && h.ok) badge('bdOcr', '本机OCR 在线 · ' + (h.engine || ''), 'ok');
+    else badge('bdOcr', '本机OCR 未启动', '');
+    return h;
+  }
+  async function ocrTranscribe() {
+    var base = ocrBase();
+    var out = [];
+    for (var i = 0; i < photos.length; i++) {
+      var ctl = new AbortController();
+      var timer = setTimeout(function () { ctl.abort(); }, 60000);
+      try {
+        var r = await fetch(base + '/ocr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: photos[i].dataUrl }),
+          signal: ctl.signal
+        });
+        var txt = await r.text();
+        if (!r.ok) throw new Error('HTTP ' + r.status + ' ' + txt.slice(0, 120));
+        var d = JSON.parse(txt);
+        if (!d.ok) throw new Error(d.error || '识别失败');
+        out.push(d.text || '');
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+    return out.join('\n\n');
+  }
+  function ocrPromptBlock(text) {
+    if (!text) return '';
+    return ['', '', '【本机 OCR 转写（同页照片的离线文字识别结果，供参考）】',
+      text,
+      '',
+      '说明：上面是整页的自动转写，印刷体部分通常准确，可直接用来核对题干；手写部分仅供参考——',
+      '如果它与你在图片上看到的手写写法不一致，请以图片为准，并在 errorReason / 过程提示里注明你采用哪种写法。'].join('\n');
+  }
+
+  /* ---------------- 模型自检与自愈 ---------------- */
+  function isModelMissing(msg) {
+    return /model[_ ]?not[_ ]?exist|model_not_found|does not exist|unknown model|invalid model/i.test(String(msg || ''));
+  }
+  async function listModels(ch) {
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, 20000);
+    try {
+      var r = await fetch(ch.base.replace(/\/+$/, '') + '/models', {
+        headers: { 'Authorization': 'Bearer ' + (ch.key || 'relay') },
+        signal: ctl.signal
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      var d = await r.json();
+      var arr = (d && (d.data || d.models || d.result)) || [];
+      var ids = [];
+      for (var i = 0; i < arr.length; i++) {
+        var it = arr[i];
+        var id = (typeof it === 'string') ? it : (it && (it.id || it.name || it.model)) || '';
+        if (id) ids.push(String(id));
+      }
+      return ids;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  /* 从可用模型里挑出"像视觉模型"的，按可信度排序 */
+  function rankVisionModels(ids) {
+    var score = function (id) {
+      var s = String(id);
+      var n = 0;
+      if (/-vl-|^vl-|qwen-vl|vision|visual|llava|pixtral|internvl|minicpm-v|glm-4v/i.test(s)) n += 12;
+      else if (/omni|multimodal/i.test(s)) n += 8;
+      if (/gpt-4o|gemini|claude/i.test(s)) n += 11;
+      if (/max|72b|plus|pro/i.test(s)) n += 3;
+      if (/realtime|audio|tts|asr|speech|voice|embedding|rerank|wanx|stable-diffusion|image-generation/i.test(s)) n -= 50;
+      if (/^text-|coder|math|mt-|translat/i.test(s)) n -= 8;
+      return n;
+    };
+    return (ids || [])
+      .map(function (id) { return { id: id, s: score(id) }; })
+      .filter(function (x) { return x.s >= 10; })
+      .sort(function (a, b) { return b.s - a.s; })
+      .map(function (x) { return x.id; });
+  }
+  function pickVisionModel(ids) {
+    var r = rankVisionModels(ids);
+    return r.length ? r[0] : '';
+  }
+  /* 常见视觉模型名（列表查询不可用时逐个探测） */
+  var PROBE_MODELS = [
+    'qwen3-vl-plus', 'qwen-vl-ocr', 'qwen3.5-omni-plus', 'qwen3-vl-max',
+    'qwen-vl-max', 'qwen-vl-plus', 'qwen2.5-vl-72b-instruct', 'Qwen2.5-VL-72B-Instruct',
+    'glm-4v', 'gpt-4o-mini', 'gemini-2.0-flash', 'moonshot-v1-8k-vision-preview'
+  ];
+  /* 用一次极小的请求验证某个模型在该地址上是否真的可用 */
+  async function probeModel(ch, model) {
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, 25000);
+    try {
+      var r = await fetch(ch.base.replace(/\/+$/, '') + '/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (ch.key || 'relay') },
+        body: JSON.stringify({ model: model, messages: [{ role: 'user', content: 'hi' }], max_tokens: 1 }),
+        signal: ctl.signal
+      });
+      return r.ok;
+    } catch (e) {
+      return false;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  /* 找出该地址上真正能用的视觉模型：先查列表排序，再逐个实测验证（列表里的名字不一定真能用） */
+  async function findVisionModel(ch) {
+    var ids = [];
+    try { ids = await listModels(ch); } catch (e) { }
+    var ranked = rankVisionModels(ids);
+    var tried = [];
+    var n = 0;
+    for (var i = 0; i < ranked.length && n < 5; i++, n++) {
+      tried.push(ranked[i]);
+      if (await probeModel(ch, ranked[i])) {
+        return { model: ranked[i], ids: ids, vision: ranked, tried: tried, source: '模型列表+实测' };
+      }
+    }
+    for (var j = 0; j < PROBE_MODELS.length; j++) {
+      if (tried.indexOf(PROBE_MODELS[j]) >= 0) continue;
+      tried.push(PROBE_MODELS[j]);
+      if (await probeModel(ch, PROBE_MODELS[j])) {
+        return { model: PROBE_MODELS[j], ids: ids, vision: ranked, tried: tried, source: '逐个实测' };
+      }
+    }
+    return { model: '', ids: ids, vision: ranked, tried: tried, source: '无' };
+  }
+  /* 「检测可用模型」：列出当前地址下支持图片的模型并自动填入 */
+  async function detectModel() {
+    var chs = channels();
+    if (!chs.length) { say('没有可用的通道，先检查「API 地址」。', 'bad'); return; }
+    var s = readSettings();
+    say('正在查询「' + chs[0].base + '」下可用的模型…');
+    var found = await findVisionModel(chs[0]);
+    if (found.model) {
+      $('setModel').value = found.model;
+      say('当前地址「' + chs[0].base + '」已实测可用的视觉模型：' + found.model
+        + '（共查到 ' + found.ids.length + ' 个模型，逐个实测过 ' + found.tried.length + ' 个；来源：' + found.source + '）。'
+        + '点「保存设置」后即可批改。', 'ok');
+    } else if (found.ids.length) {
+      say('查到 ' + found.ids.length
+        + ' 个模型，但实测下来没有能用于图片识别的（已试：' + found.tried.slice(0, 6).join('、')
+        + '）。批改需要视觉模型，请把「API 地址」换成支持图片识别的服务。', 'bad');
+    } else {
+      say('该地址查询不到模型列表，逐个实测也没找到可用视觉模型。请确认「API 地址」和「API Key」是否正确；'
+        + '阿里百炼的地址是 https://dashscope.aliyuncs.com/compatible-mode/v1 ，模型填 qwen3-vl-plus（qwen-vl-max 已下线）。', 'bad');
+    }
+  }
+
+  /* 启动自检：配置里的模型若已下线或在该地址不存在，自动换成可用的（10 分钟内不重复检查） */
+  async function ensureModel() {
+    var s = readSettings();
+    var stale = RETIRED_MODELS.indexOf(s.model) >= 0;
+    var last = 0;
+    try { last = Number(localStorage.getItem('hwgrade.modelCheckedAt') || 0); } catch (e) { }
+    if (!stale && Date.now() - last < 600000) return;
+    var chs = channels();
+    if (!chs.length) return;
+    try { localStorage.setItem('hwgrade.modelCheckedAt', String(Date.now())); } catch (e) { }
+    var ch = chs[0];
+    if (await probeModel(ch, s.model)) return;
+    say('当前模型「' + s.model + '」在该地址上不可用（很可能已下线），正在自动查找可用模型…', 'bad');
+    var found = await findVisionModel(ch);
+    if (found.model && found.model !== s.model) {
+      try {
+        localStorage.setItem(LS_SET, JSON.stringify({
+          mode: s.mode, apiBaseUrl: s.apiBaseUrl, apiKey: s.apiKey, model: found.model, relayUrl: s.relayUrl
+        }));
+      } catch (e) { }
+      fillSettingsForm();
+      say('已自动把模型换成「' + found.model + '」（' + found.source + '），直接点「开始批改」即可。', 'ok');
+    } else {
+      say('当前地址上没找到可用的视觉模型，请打开「识别服务设置」检查地址与 API Key。', 'bad');
+    }
+  }
+
+  /* ---------------- 自动更新：磁盘上的版本比自己新就重载（解决"改了窗口不变"） ---------------- */
+  var lastReloadAt = 0;
+  async function checkUpdate(manual) {
+    try {
+      var url = location.href.split('#')[0].split('?')[0] + '?_=' + Date.now();
+      var r = await fetch(url, { cache: 'no-store' });
+      if (!r.ok) { if (manual) say('检查更新失败：HTTP ' + r.status, 'bad'); return; }
+      var t = await r.text();
+      var m = /var BUILD = '([^']+)'/.exec(t);
+      if (!m) { if (manual) say('这个页面不是通过工作台托管的，无法自动检查更新。', 'bad'); return; }
+      if (m[1] !== BUILD) {
+        if (Date.now() - lastReloadAt < 20000) return;      // 防抖，避免反复刷新
+        lastReloadAt = Date.now();
+        say('检测到窗口有新版本，正在自动刷新…', 'ok');
+        setTimeout(function () { try { location.reload(); } catch (e) { } }, 400);
+        return;
+      }
+      if (manual) say('已是最新版本（' + BUILD + '）。', 'ok');
+    } catch (e) {
+      if (manual) say('检查更新失败：' + ((e && e.message) || e), 'bad');
+    }
+  }
+
+  /* ---------------- 中转探测 ---------------- */
+  async function probeRelay() {
+    var s = readSettings();
+    var base = (s.relayUrl || '').replace(/\/+$/, '');
+    relayAlive = false;
+    if (base) {
+      try {
+        var ctl = new AbortController();
+        var t = setTimeout(function () { ctl.abort(); }, 1200);
+        var r = await fetch(base + '/health', { cache: 'no-store', signal: ctl.signal });
+        clearTimeout(t);
+        if (r.ok) relayAlive = true;
+      } catch (e) { relayAlive = false; }
+    }
+    if (relayAlive) badge('bdChan', '本机中转 在线');
+    else badge('bdChan', s.mode === 'relay' ? '本机中转 离线' : '识别服务 直连', s.mode === 'relay' ? 'wait' : '');
+    return relayAlive;
+  }
+
+  /* 分块高清时追加的合并说明 */
+  var MERGE_NOTE = '\n\n【重要】这次给的是同一页照片按原分辨率切开的高清小块（相邻块之间有少量重叠）：'
+    + '同一道题可能跨块出现，请务必按题号合并去重，每道题只输出一条；'
+    + '被块边界切断的同一句话只保留一份，不要重复抄写同一段文字或同一个步骤；块边缘的半个字可以忽略。'
+    + '宁可慢一点，也要把角标字母（∠DGC 这类）逐字看清。';
+
+  /* ---------------- 提示词 ---------------- */
+  function buildPrompt(hint) {
+    var lines = [
+      '你是资深阅卷老师。请对下面提供的学生作业照片逐题批改。',
+      '',
+      '【识别】',
+      '1. 逐字识别图片中的题目原文，含选项与图上标注的条件；数学公式用 LaTeX 行内写法（例如 $x^2+1$、$\\frac{a}{b}$）。',
+      '2. 逐字识别学生的手写作答（含解题过程）；字迹潦草时按最合理的读法识别，确实无法确定的写「无法辨认」。',
+      '3. 角标字母和符号（如 ∠DGC、∠AGC、∠1、△ABC）必须逐字放大确认，绝不能按上下文猜测或顺手写成别的字母；',
+      '   某个关键字母确实看不清时，把该处写成「无法辨认」，该题 confidence 填 low，并且不要据此判学生错。',
+      '4. 若一张图里有多道题，按题号拆成多条；若图里只有题目没有作答，studentAnswer 填「未作答」。',
+      '4b.【英文字母保真】撇号（\'）、连字符（-）、大小写、单复数、时态、单位符号必须"照抄学生写的"，',
+      '   绝对不许自行补全、规范化或顺手写对。学生写 grandparents 就不能写成 grandparents\'；',
+      '   看不出到底有没有那个撇号时写成 grandparents\'? 并把该题 confidence 设为 low。',
+      '',
+      '【判卷】',
+      '5. isCorrect 只能是 true 或 false；部分正确也按 false，并在 verdict 里写「部分正确」。',
+      '6. 判错时 errorReason 必须指出具体错在哪一步（概念错误 / 计算错误 / 审题错误 / 漏解 / 单位或符号错误等），',
+      '   并引用学生写的那一步原文，不要只写「做错了」。',
+      '7. correctAnswer 给出正确答案（含关键结论）；solutionSteps 给出完整解题步骤，3～6 步。',
+      '7b. 英语 / 单词 / 填空类题目：学生写出的与正确答案在撇号、连字符、大小写、单复数、时态、拼写上',
+      '   只要有任何差别，就必须判「错误」（verdict 写「细节错误」），并在 errorReason 里把两种写法并排写出来对比',
+      '   （例如「学生写 grandparents，正确答案是 grandparents\'，少了所有格撇号」）；',
+      '   不确定到底有没有那个撇号时，写 verdict「存疑（无法确认撇号/大小写）」而不是判对。',
+      '8. 判错前必须做两件事：① 把你自己算出的答案与学生在图上写出的最终答案核对一遍，**数值相同就一律判「正确」**；',
+      '   若你认为推导过程有瑕疵，只能在 errorReason 里以「过程提示：…」的形式写出，不许因此判错；',
+      '   ② 若图片里印有这道题的参考答案或解析（印刷体，不是手写），先读出它的最终答案——学生与之相同就判「正确」，',
+      '   你自己的结论与印刷答案不同时以印刷答案为准。',
+      '9. 不要编造几何关系：你写出的每一个等角 / 互补 / 平行关系，都必须能说清是"哪两条直线被哪条截线所截"；',
+      '   说不清的关系就不要写，更不要为了找出错误而硬造一个理由。宁可判「存疑（无法核对图形）」。',
+      '10. 几何题先把关系列清楚再算：哪些角是同位角 / 内错角 / 同旁内角，哪两条直线平行，哪些角互为补角，',
+      '   不要凭印象直接把两个角当相等。',
+      '11. 若题目表述不清或照片太模糊而无法判断，verdict 填「无法判定」，isCorrect 填 false，confidence 填 low。',
+      '',
+      '【知识点】',
+      '12. knowledgePoints 至少 1 条、最多 3 条，每条形如：',
+      '   name（知识点名称，如「一元二次方程求根公式」）、',
+      '   explain（用 2～4 句给这个年级的学生讲清该知识点）、',
+      '   pitfall（本题暴露的易错点）、',
+      '   variant（一道举一反三的练习题，只写题干）、',
+      '   variantAnswer（该练习题的答案）。',
+      '',
+      '【自检与存疑】',
+      '13. 下结论前先把自己写出的关键等式代回题目条件验算一遍（尤其是自己设的未知数）。',
+      '14. 若图片里已印有参考答案，或学生是照抄了图中的解答，而你的结论与之不一致：必须重新演算两遍再判；',
+      '    仍然不一致时，verdict 写「存疑（与图中解答不一致）」，isCorrect 写 false，confidence 写 low，',
+      '    errorReason 必须写清「我的结论是 X，图中解答是 Y，可能的分歧点在哪」，不要直接判学生错。',
+      '',
+      '【输出格式】',
+      '15. JSON 里所有文本都**不要出现英文双引号**（否则 JSON 会坏掉）：需要引用某个单词时用单引号或中文引号，',
+      '    例如 errorReason 写成「学生写 grandparents，少了撇号」，不要写成 学生写 "grandparents"。',
+      '16. 只输出一个 JSON 对象，不要 markdown 代码块、不要任何解释文字，不要缩进和换行（尽量紧凑，避免被截断）。结构如下：',      '{',
+      '  "subject": "学科",',
+      '  "grade": "年级，不确定就填空字符串",',
+      '  "questions": [',
+      '    {',
+      '      "no": "题号，如 1 或 2(1)",',
+      '      "stem": "题目原文",',
+      '      "studentAnswer": "学生手写作答的识别结果",',
+      '      "correctAnswer": "正确答案",',
+      '      "isCorrect": true,',
+      '      "verdict": "正确 或 错误 或 部分正确 或 无法判定",',
+      '      "errorReason": "判错的具体原因；正确则填 无",',
+      '      "solutionSteps": ["步骤1", "步骤2", "步骤3"],',
+      '      "knowledgePoints": [',
+      '        {"name": "", "explain": "", "pitfall": "", "variant": "", "variantAnswer": ""}',
+      '      ],',
+      '      "confidence": "high 或 medium 或 low"',
+      '    }',
+      '  ],',
+      '  "overall": {',
+      '    "correct": 0,',
+      '    "wrong": 0,',
+      '    "scoreText": "对 2 题 / 共 3 题",',
+      '    "weakPoints": ["最需要巩固的知识点1", "知识点2"],',
+      '    "advice": "针对本次作业的 1～2 句建议"',
+      '  }',
+      '}',
+      '17. overall.correct / overall.wrong 必须与 questions 中的实际数量一致。'
+    ];
+    if (hint) lines.push('', '【老师补充要求】' + hint);
+    return lines.join('\n');
+  }
+
+  /* ---------------- 调模型 ---------------- */
+  function channels() {
+    var s = readSettings();
+    var list = [];
+    var direct = { name: '直连', base: (s.apiBaseUrl || '').replace(/\/+$/, ''), key: s.apiKey, model: s.model };
+    var relay = { name: '本机中转', base: (s.relayUrl || '').replace(/\/+$/, ''), key: '', model: s.model };
+    if (s.mode === 'relay') { list.push(relay); }
+    else if (s.mode === 'direct') { list.push(direct); }
+    else { list.push(relayAlive ? relay : direct); list.push(relayAlive ? direct : relay); }
+    return list.filter(function (c) { return !!c.base; });
+  }
+
+  async function postChat(ch, body) {
+    if (!ch.key && ch.name === '直连') throw new Error('没有填 API Key');
+    var ctl = new AbortController();
+    var timer = setTimeout(function () { ctl.abort(); }, 240000);
+    try {
+      var res = await fetch(ch.base + '/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + (ch.key || 'relay')
+        },
+        body: JSON.stringify(body),
+        signal: ctl.signal
+      });
+      var text = await res.text();
+      if (!res.ok) throw new Error('HTTP ' + res.status + ' · ' + text.slice(0, 300));
+      var data;
+      try { data = JSON.parse(text); } catch (e) { throw new Error('返回内容不是 JSON：' + text.slice(0, 200)); }
+      var msg = data.choices && data.choices[0] && data.choices[0].message;
+      var content = msg && (typeof msg.content === 'string' ? msg.content
+        : (Array.isArray(msg.content) ? msg.content.map(function (p) { return p.text || ''; }).join('') : ''));
+      if (!content) throw new Error('模型没有返回内容：' + text.slice(0, 300));
+      return content;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  /* 输出被截断时的抢救式补全：补引号、去残缺尾巴、补齐括号 */
+  function salvageJson(text) {
+    var s = String(text).replace(/```/g, '').trim();
+    var a = s.indexOf('{');
+    if (a > 0) s = s.slice(a);
+    var out = '', stack = [], inStr = false, esc = false;
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charAt(i);
+      if (inStr) {
+        out += c;
+        if (esc) esc = false;
+        else if (c === '\\') esc = true;
+        else if (c === '"') inStr = false;
+        continue;
+      }
+      if (c === '"') { inStr = true; out += c; continue; }
+      if (c === '{' || c === '[') { stack.push(c === '{' ? '}' : ']'); out += c; continue; }
+      if (c === '}' || c === ']') { stack.pop(); out += c; continue; }
+      out += c;
+    }
+    if (inStr) out += '"';
+    out = out.replace(/,\s*"[^"]*"\s*:\s*$/, '').replace(/,\s*"[^"]*"\s*$/, '').replace(/,\s*$/, '');
+    while (stack.length) out += stack.pop();
+    return JSON.parse(out.replace(/,\s*([}\]])/g, '$1'));
+  }
+
+  /* 修"字符串里出现裸双引号"（模型写英文答案时很常见，例如 学生写 "grandparents" 少了撇号） */
+  function repairInnerQuotes(t) {
+    var s = String(t == null ? '' : t);
+    var out = '', inStr = false, esc = false;
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charAt(i);
+      if (!inStr) {
+        out += c;
+        if (c === '"') inStr = true;
+        continue;
+      }
+      if (esc) { out += c; esc = false; continue; }
+      if (c === '\\') { out += c; esc = true; continue; }
+      if (c === '"') {
+        var j = i + 1;
+        while (j < s.length && /\s/.test(s.charAt(j))) j++;
+        var nx = s.charAt(j);
+        if (nx === '' || nx === ',' || nx === '}' || nx === ']' || nx === ':') {
+          out += c;            // 正常收尾
+          inStr = false;
+        } else {
+          out += "'";          // 串内裸引号 → 换成单引号
+        }
+        continue;
+      }
+      out += c;
+    }
+    return out;
+  }
+
+  /* 修"字符串里出现真实换行/制表符"（模型写多行文本时很常见，会让 JSON 非法） */
+  function repairCtrlChars(t) {
+    var s = String(t == null ? '' : t), out = '', inStr = false, esc = false;
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charAt(i);
+      if (!inStr) {
+        out += c;
+        if (c === '"') inStr = true;
+        continue;
+      }
+      if (esc) { out += c; esc = false; continue; }
+      if (c === '\\') { out += c; esc = true; continue; }
+      if (c === '"') { out += c; inStr = false; continue; }
+      if (c === '\n') { out += '\\n'; continue; }
+      if (c === '\r') { out += '\\r'; continue; }
+      if (c === '\t') { out += '\\t'; continue; }
+      if (c.charCodeAt(0) < 0x20) { out += ' '; continue; }
+      out += c;
+    }
+    return out;
+  }
+  /* 修"非法反斜杠转义"（JSON 只允许 \" \\ \/ \b \f \n \r \t \uXXXX，别的要转义成双反斜杠） */
+  function repairBackslashes(t) {
+    return String(t == null ? '' : t).replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
+  }
+  /* 组合修复：真实控制字符 → 串内裸引号 → 非法转义 */
+  function repairJsonText(t) {
+    return repairBackslashes(repairInnerQuotes(repairCtrlChars(String(t == null ? '' : t))));
+  }
+
+  function extractJson(text) {
+    var t = String(text).trim();
+    t = t.replace(/^\uFEFF/, '');
+    t = t.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
+    var a = t.indexOf('{'), b = t.lastIndexOf('}');
+    if (a >= 0 && b > a) t = t.slice(a, b + 1);
+    var noTrail = function (s) { return s.replace(/,\s*([}\]])/g, '$1'); };
+    var tries = [
+      function (s) { return s; },
+      repairInnerQuotes,
+      repairCtrlChars,
+      function (s) { return repairInnerQuotes(repairCtrlChars(s)); },
+      repairJsonText,
+      noTrail,
+      function (s) { return noTrail(repairJsonText(s)); },
+      function (s) { return noTrail(s.replace(/'/g, '"')); }
+    ];
+    for (var i = 0; i < tries.length; i++) {
+      try { return JSON.parse(tries[i](t)); } catch (e) { }
+    }
+    // 输出被截断（可能同时有裸引号 / 控制字符 / 非法转义）
+    try { return salvageJson(t); } catch (e) { }
+    try { return salvageJson(repairJsonText(t)); } catch (e) { }
+    throw new Error('识别结果解析失败，请点「重新批改」再试一次。开头：' + t.slice(0, 80) + ' …… 末尾：' + t.slice(-80));
+  }
+
+  async function callModel(extra, plainImages, textOnly, overrideImage, standalone) {
+    var s = readSettings();
+    var urls = overrideImage ? [overrideImage]
+      : (textOnly ? [] : (plainImages ? photos.map(function (p) { return p.dataUrl; }) : await buildImageList()));
+    var content = urls.map(function (u) {
+      return { type: 'image_url', image_url: { url: u } };
+    });
+    // standalone=true：只发这一条指令（用于"定位"这类单一任务，避免模型被批改提示词带跑）
+    var text;
+    if (standalone) {
+      text = String(extra || '');
+    } else {
+      text = buildPrompt(($('hint').value || '').trim());
+      if (!plainImages && !textOnly && urls.length > photos.length) text += MERGE_NOTE;
+      if (extra) text += extra;
+    }
+    content.push({ type: 'text', text: text });
+    var body = {
+      model: s.model,
+      messages: [{ role: 'user', content: content }],
+      temperature: 0.2,
+      max_tokens: 8000
+    };
+    var chs = channels();
+    if (!chs.length) throw new Error('没有可用的识别通道，请在「识别服务设置」里检查地址。');
+    var lastErr = null;
+    for (var i = 0; i < chs.length; i++) {
+      try {
+        if (chs[i].name === '本机中转') say('正在通过本机中转识别与批改…');
+        else say('正在直连模型识别与批改…');
+        return await postChat(chs[i], body);
+      } catch (e) {
+        lastErr = e;
+        var m = (e && e.message) || '';
+        // 模型名不对（含已下线）：自动查该地址有哪些能看图的模型，换一个重试
+        if (isModelMissing(m) && !chs[i].healed) {
+          chs[i].healed = true;
+          say('该服务上没有模型「' + body.model + '」（可能已下线），正在自动查找可用模型…', 'bad');
+          var found = null;
+          try { found = await findVisionModel(chs[i]); } catch (e2) { found = null; }
+          if (found && found.model && found.model !== body.model) {
+            var old = readSettings();
+            try {
+              localStorage.setItem(LS_SET, JSON.stringify({
+                mode: old.mode, apiBaseUrl: old.apiBaseUrl, apiKey: old.apiKey, model: found.model, relayUrl: old.relayUrl
+              }));
+            } catch (e3) { }
+            fillSettingsForm();
+            body.model = found.model;
+            say('已自动把模型改成该地址可用的「' + found.model + '」并重试…', 'ok');
+            return await postChat(chs[i], body);
+          }
+          lastErr = new Error('模型不存在：地址「' + chs[i].base + '」上没有「' + body.model
+            + '」。请打开「识别服务设置」→ 点「检测可用模型」自动选一个，或点「恢复默认设置」'
+            + '（百炼 + qwen3-vl-plus；原来的 qwen-vl-max 已经下线了）。');
+          if (i < chs.length - 1) { say('换另一条通道再试…', 'bad'); continue; }
+          throw lastErr;
+        }
+        if (/Failed to fetch|NetworkError|Load failed|aborted|ERR_/i.test(m) && i < chs.length - 1) {
+          say('「' + chs[i].name + '」通道不可用，自动切换另一条通道…', 'bad');
+          continue;
+        }
+        if (i < chs.length - 1) continue;
+      }
+    }
+    var em = (lastErr && lastErr.message) || '未知错误';
+    if (/Failed to fetch|NetworkError|Load failed/i.test(em)) {
+      throw new Error('浏览器无法直连模型服务（通常是跨域或网络被拦）。解决办法：双击项目文件夹里的「作业批改-启动中转.bat」，然后回到这里点「开始批改」即可。');
+    }
+    throw lastErr;
+  }
+
+  /* ---------------- 批改流程 ---------------- */
+  function setBusy(on, txt) {
+    busy = on;
+    $('progBox').classList.toggle('hid', !on);
+    $('btnGrade').disabled = on;
+    $('btnGrade').textContent = on ? '批改中…' : '开始批改';
+    if (on) {
+      badge('bdStep', '批改中', 'wait');
+      $('progBar').style.width = '10%';
+      $('progTxt').textContent = txt || '正在识别题目与手写作答…';
+      var p = 10;
+      setBusy.timer = setInterval(function () {
+        p = Math.min(92, p + Math.random() * 7);
+        $('progBar').style.width = p.toFixed(0) + '%';
+        if (p > 45) $('progTxt').textContent = '正在判定正误并整理知识点…';
+      }, 900);
+    } else {
+      clearInterval(setBusy.timer);
+      $('progBar').style.width = '100%';
+    }
+  }
+
+  function setCaptureCollapsed(on) {
+    $('capBody').classList.toggle('hid', !!on);
+    $('capDone').classList.toggle('hid', !on);
+    $('btnCapToggle').textContent = on ? '展开采集区' : '收起采集区';
+  }
+
+  /* 人工修正：老师可改掉识别错的手写文本，再按修正文本重新判卷 */
+  var corrections = {};   // { 题号: 修正后的学生作答 }
+  function fixPrompt() {
+    var ks = Object.keys(corrections);
+    if (!ks.length) return '';
+    var L = ['', '', '【人工修正的学生作答】老师已人工核对并改正了下面的手写作答识别结果（例如把误读的 ∠AGC 改成 ∠DGC）。',
+      '请完全以这些文本为准判卷，不要再依据图片自行识别手写；题目、图形与已知条件仍以图片为准：'];
+    ks.forEach(function (k) { L.push('- 第 ' + k + ' 题的学生作答：' + corrections[k]); });
+    return L.join('\n');
+  }
+  /* 窗口重载后照片已不在内存：只凭已识别出的文本 + 人工修正再判一次（保守判法，避免误伤） */
+  function textRegradePrompt() {
+    var L = ['', '', '【本次没有照片，请只依据下列文本重新判卷】',
+      '下面是之前从照片识别出的题目与学生作答，其中学生作答已由老师人工核对修正（例如把误读的 ∠AGC 改成 ∠DGC）。',
+      '每条附带的「此前判定」是基于可能识别有误的文本做出的，只作参考。',
+      '判卷规则：修正后的作答只要逻辑成立、与题目条件不矛盾，就应改判为「正确」；',
+      '只有修正后的作答确实存在概念 / 计算 / 审题 / 漏解错误时才判「错误」；',
+      '仅凭文字无法确定图形关系时，宁可判「存疑（无法核对图形）」并说明原因，也不要判错。',
+      '输出格式与前面要求完全一致：'];
+    var qs = (result && result.questions) ? result.questions : [];
+    qs.forEach(function (q) {
+      L.push('');
+      L.push('第 ' + q.no + ' 题');
+      L.push('题目：' + (q.stem || ''));
+      L.push('学生作答：' + (corrections[String(q.no)] || q.studentAnswer || ''));
+      L.push('此前判定：' + (q.isCorrect ? '正确' : (q.verdict || '错误'))
+        + (q.isCorrect ? '' : ('（当时给的错因：' + (q.errorReason || '未说明') + '）')));
+    });
+    return L.join('\n');
+  }
+  function syncFixUI() {
+    var n = Object.keys(corrections).length;
+    var btn = $('btnRefix');
+    if (btn) {
+      btn.classList.toggle('hid', !n);
+      btn.textContent = '按修正后的文本重新判卷（' + n + ' 题已修正）';
+    }
+  }
+
+  async function grade(useFixes) {
+    if (busy) return;
+    var hasFixes = Object.keys(corrections).length > 0;
+    if (useFixes && !hasFixes) { say('还没有需要修正的题：先点某题右边的「✎ 手写识别错了？点这里修正」。', 'bad'); return; }
+    // 没有照片时（窗口重载过，或只剩上次结果）：只凭识别文本 + 人工修正重判，不再要求拍照
+    var textOnly = useFixes && !photos.length;
+    if (!photos.length && !textOnly) {
+      say('照片已不在内存里（窗口重载过）。请重新上传/粘贴照片，或先点某题的「✎ 手写识别错了？点这里修正」，我会只凭识别出的文本重判。', 'bad');
+      return;
+    }
+    var extra = useFixes ? (fixPrompt() + (textOnly ? textRegradePrompt() : '')) : '';
+    var applied = {};
+    if (useFixes) for (var k in corrections) applied[k] = corrections[k];
+    setBusy(true);
+    try {
+      // 可选：先用本机离线 OCR 转写，把文本作为参考交给模型
+      var ocrText = '';
+      if (!textOnly && $('ocrFirst') && $('ocrFirst').checked) {
+        $('progTxt').textContent = '正在用本机 OCR 转写（离线）…';
+        $('progBar').style.width = '25%';
+        try {
+          ocrText = await ocrTranscribe();
+          say('本机 OCR 转写完成（' + ocrText.replace(/\s/g, '').length + ' 字），正在交由模型判卷…', 'ok');
+        } catch (e) {
+          say('本机 OCR 不可用（' + ((e && e.message) || e) + '），本次直接让模型读图。请先双击「作业批改-启动OCR.bat」。', 'bad');
+        }
+      }
+      var raw = await callModel(extra + ocrPromptBlock(ocrText), !!useFixes && !textOnly, textOnly);
+      var data = extractJson(raw);
+      if ($('strict') && $('strict').checked && !useFixes) {
+        $('progTxt').textContent = '第二遍批改（交叉校验）…';
+        $('progBar').style.width = '72%';
+        try {
+          data = crossCheck(data, extractJson(await callModel(extra, false)));
+        } catch (e2) {
+          say('第二遍批改没成功，已按单遍结果给出。', 'bad');
+        }
+      }
+      // 错题复核：只对判错的题再验一遍，专门防「看错字母就判错」
+      if (!useFixes && photos.length && $('recheck') && $('recheck').checked) {
+        var nWrong = (data.questions || []).filter(function (q) { return q && q.isCorrect !== true; }).length;
+        if (nWrong) {
+          $('progTxt').textContent = '错题复核中（' + nWrong + ' 题）…';
+          $('progBar').style.width = '86%';
+          data = await recheckWrong(data);
+        }
+      }
+      result = normalize(data);
+      if (ocrText) result.ocrText = ocrText;
+      // 人工修正过的作答，直接落到结果里，保证显示的就是老师写的原文
+      result.questions.forEach(function (q) {
+        if (Object.prototype.hasOwnProperty.call(applied, String(q.no))) q.studentAnswer = applied[String(q.no)];
+      });
+      if (useFixes) { corrections = {}; }
+      try { localStorage.setItem(LS_RES, JSON.stringify(result)); } catch (e) { }
+      render();
+      syncFixUI();
+      badge('bdStep', '批改完成', 'ok');
+      say((useFixes ? ('已按你修正的识别文本重新判卷' + (textOnly ? '（本次没有照片，按文本重判）' : '') + '：') : '批改完成：')
+        + '共 ' + result.questions.length + ' 题，正确 ' + result.overall.correct + ' 题，错误 ' + result.overall.wrong + ' 题'
+        + (result.overall.pending ? ('，未作答/存疑 ' + result.overall.pending + ' 题') : '')
+        + (result.crossChecked ? '（严格模式：双跑交叉校验，分歧 ' + result.crossDiff + ' 处）' : '')
+        + (result.rechecked ? '（错题复核：' + (result.recheckChanged ? ('改判/存疑 ' + result.recheckChanged + ' 题') : '维持原判') + '）' : '') + '。', 'ok');
+      setCaptureCollapsed(true);          // 批改完直接收起采集区，让窗口停在结果上
+      $('resultBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (!photos.length) return;
+      // 定位每道题的区域（批注 + 精读都要用）
+      var locs = null;
+      try {
+        locs = await locateAllPhotos(result.questions);
+        // 逐个框读题号，纠正"框到页眉/整体错行一行"
+        locs = await realignBoxes(result.questions, locs);
+        if (locs && locs[0]) {
+          var vn = locs[0].verified || 0, mv = locs[0].realigned || 0, hb = locs[0].headerBoxes || 0;
+          if (locs[0].attempts && locs[0].attempts.length) say('定位：' + locs[0].attempts.join('；'), 'bad');
+          if (mv || hb) say('题号对齐：重挂 ' + mv + ' 个框' + (hb ? ('，丢弃 ' + hb + ' 个页眉框') : '') + '，共核对 ' + vn + ' 题。', 'ok');
+        }
+      } catch (e) { }
+      // 放大精读复核：按题裁切放大 2× 再读一遍，读法不一致的题判存疑、不判错
+      if ($('refineOn') && $('refineOn').checked && result.questions.length <= 12) {
+        try {
+          var refinedJson = await refineWithCrops(result.questions, locs);
+          if (refinedJson) {
+            result = mergeRefined(result, refinedJson);
+            try { localStorage.setItem(LS_RES, JSON.stringify(result)); } catch (e4) { }
+            render();
+            syncFixUI();
+            say('放大精读复核：' + (result.refinedChanged
+              ? ('有 ' + result.refinedChanged + ' 题与第一遍不同，已按上述规则处理（不一致的判存疑、不计入错误）')
+              : '与第一遍识别完全一致，结果可信')
+              + (result.refinedMismatched ? ('；另有 ' + result.refinedMismatched + ' 个框与题号对不上，已重新定位') : '') + '。',
+              result.refinedChanged ? 'bad' : 'ok');
+          }
+        } catch (e3) {
+          say('放大精读复核没跑成功：' + ((e3 && e3.message) || e3), 'bad');
+        }
+      }
+      // 原图批改标注（默认动作，不需要选择）
+      try {
+        var marked = await buildAnnotation(locs);
+        if (marked) showAnnotation(marked);
+        else $('markCard').classList.add('hid');
+      } catch (e2) {
+        say('原图批注没做成：' + ((e2 && e2.message) || e2), 'bad');
+      }
+    } catch (e) {
+      badge('bdStep', '批改失败', 'wait');
+      say((e && e.message) ? e.message : String(e), 'bad');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /* 严格模式：两遍结果交叉校验，结论不一致的题标存疑、不计入错误 */
+  function crossCheck(a, b) {
+    var qs2 = (b && Array.isArray(b.questions)) ? b.questions : [];
+    var idx = {};
+    qs2.forEach(function (q) { if (q && q.no != null) idx[String(q.no).trim()] = q; });
+    var aq = Array.isArray(a.questions) ? a.questions : [];
+    var diff = 0, matched = 0;
+    aq.forEach(function (q) {
+      var m = idx[String(q.no == null ? '' : q.no).trim()];
+      if (!m) return;
+      matched++;
+      var v1 = q.isCorrect === true, v2 = m.isCorrect === true;
+      if (v1 === v2) {
+        if (m.correctAnswer && !q.correctAnswer) q.correctAnswer = m.correctAnswer;
+        return;
+      }
+      diff++;
+      var t1 = v1 ? '正确' : (q.verdict || '错误');
+      var t2 = v2 ? '正确' : (m.verdict || '错误');
+      q.isCorrect = false;
+      q.verdict = '存疑（两次批改结论不一致）';
+      q.confidence = 'low';
+      q.errorReason = '第一遍判「' + t1 + '」，第二遍判「' + t2
+        + '」。两遍结论不一致，多半是手写识别或推理出现分歧，已不计入错误，建议人工复核这一步。'
+        + (m.correctAnswer && m.correctAnswer !== q.correctAnswer ? '（第二遍给出的答案：' + m.correctAnswer + '）' : '');
+    });
+    if (qs2.length !== aq.length) diff += Math.abs(qs2.length - aq.length);
+    a.crossChecked = true;
+    a.crossDiff = diff;
+    a.crossMatched = matched;
+    return a;
+  }
+
+  /* 错题复核：对判错的题再验一遍（字母看错 / 推理跑偏是最常见的误判来源） */
+  async function recheckWrong(data) {
+    var wrongs = (data.questions || []).filter(function (q) { return q && q.isCorrect !== true; });
+    if (!wrongs.length) return data;
+    var L = ['', '', '【错题复核】请把下面这几道题重新独立批改一遍（不要参考任何此前的识别结果，一律以图片为准）：',
+      '1) 逐字重看图片里学生写的手写内容，特别是角标字母和符号（∠DGC / ∠AGC / ∠1 / △ABC 这类最容易看错）；',
+      '2) 几何题先把关系列清楚再算：哪些角是同位角 / 内错角 / 同旁内角、哪两条直线平行、哪些角互为补角，',
+      '   不要凭印象把两个角直接当相等；',
+      '3) 算完必须自检：把你自己算出的最终答案与学生在图上写出的最终答案核对一遍——数值相同就不能判错；',
+      '   若图上印有参考答案或解析，先读出它的答案，学生与之相同就判「正确」，你的结论与印刷答案冲突时以印刷答案为准；',
+      '4) 给出你自己的判定：isCorrect / verdict / errorReason（判错时必须引用学生写的那一步原文）/ correctAnswer / solutionSteps；',
+      '5) 实在看不清或两种算法结果不同，就写 verdict「存疑（复核无法确定）」，不要勉强判错。',
+      '输出格式与前面完全一致（只输出 JSON，questions 里只放被复核的这几条）：'];
+    wrongs.forEach(function (q) {
+      L.push('');
+      L.push('需要复核的题号：' + q.no);
+      L.push('题干（供你定位，不作为判卷依据）：' + String(q.stem || '').replace(/\n/g, ' ').slice(0, 120));
+    });
+    try {
+      var d2 = extractJson(await callModel(L.join('\n')));
+      return mergeRecheck(data, d2);
+    } catch (e) {
+      say('错题复核没跑成功，已按第一遍结果给出。', 'bad');
+      return data;
+    }
+  }
+  /* 抽取"关键内容"：角标字母（∠ABC / ∠1）、数字、英文单词（含撇号/连字符），用来判断两次读到的内容是否一致 */
+  function keySets(s) {
+    var t = String(s == null ? '' : s).toUpperCase();
+    var labels = {}, nums = {}, words = {};
+    (t.match(/∠\s*([A-Z0-9]{1,4})/g) || []).forEach(function (x) { labels[String(x).replace(/[^A-Z0-9]/g, '')] = 1; });
+    (t.match(/\d+(?:\.\d+)?/g) || []).forEach(function (x) { nums[x] = 1; });
+    // 英文单词：保留撇号与连字符（grandparents 与 grandparents' 视为不同）
+    (t.match(/[A-Z][A-Z'’\-]{1,}/g) || []).forEach(function (w) { words[w.replace(/’/g, "'")] = 1; });
+    return { labels: Object.keys(labels).sort(), nums: Object.keys(nums).sort(), words: Object.keys(words).sort() };
+  }
+  /* 两次识别是否读到同一个东西：只比关键内容（对 DGC/AGC、grandparents/grandparents' 这类差异敏感） */
+  function sameKeyContent(a, b) {
+    var A = keySets(a), B = keySets(b);
+    var empty = function (K) { return !K.labels.length && !K.nums.length && !K.words.length; };
+    if (empty(A) || empty(B)) return similarAnswer(a, b);
+    var eq = function (x, y) { return x.length === y.length && x.join(',') === y.join(','); };
+    return eq(A.labels, B.labels) && eq(A.nums, B.nums) && eq(A.words, B.words);
+  }
+  /* 两段文本是否"基本一致"（忽略空白标点；一方包含另一方也算一致） */
+  function similarAnswer(a, b) {
+    var norm = function (s) { return String(s == null ? '' : s).replace(/[\s，,。．.、；;：:（）()「」【】]/g, '').toUpperCase(); };
+    var x = norm(a), y = norm(b);
+    if (!x || !y) return true;
+    if (x === y) return true;
+    var longer = x.length >= y.length ? x : y, shorter = x.length >= y.length ? y : x;
+    if (shorter.length >= 6 && longer.indexOf(shorter) >= 0) return true;   // 一方包含另一方
+    var n = Math.min(x.length, y.length), same = 0;
+    for (var i = 0; i < n; i++) { if (x.charAt(i) === y.charAt(i)) same++; else break; }
+    return same / Math.max(x.length, y.length) > 0.8;
+  }
+  /* 学生写出的最终答案是否与"正确答案"数值对得上（只对数值型答案生效，如 ∠D=50°） */
+  function answerMatches(correct, student) {
+    var cs = String(correct == null ? '' : correct);
+    var nums = (cs.match(/\d+(?:\.\d+)?/g) || []).filter(function (n) { return n.length >= 2 || /°/.test(cs); });
+    if (!nums.length) return false;
+    var s = String(student == null ? '' : student);
+    for (var i = 0; i < nums.length; i++) if (s.indexOf(nums[i]) >= 0) return true;
+    return false;
+  }
+  /* 两段文本里的数字是否毫无交集（用来判断"两次算出的答案根本不是同一个"） */
+  function numsDiffer(a, b) {
+    var get = function (s) { return (String(s == null ? '' : s).match(/\d+(?:\.\d+)?/g) || []); };
+    var x = get(a), y = get(b);
+    if (!x.length || !y.length) return false;
+    for (var i = 0; i < x.length; i++) if (y.indexOf(x[i]) >= 0) return false;
+    return true;
+  }
+  function mergeRecheck(a, b) {
+    var idx = {};
+    ((b && b.questions) || []).forEach(function (q) { if (q && q.no != null) idx[String(q.no).trim()] = q; });
+    var changed = 0;
+    (a.questions || []).forEach(function (q) {
+      var m = idx[String(q.no == null ? '' : q.no).trim()];
+      if (!m) return;
+      var fresh = m.studentAnswer;
+      var stable = sameKeyContent(q.studentAnswer, fresh);
+      var ansStable = !numsDiffer(q.correctAnswer, m.correctAnswer);
+      if (m.isCorrect === true) {
+        q.isCorrect = true;
+        q.verdict = '正确';
+        q.errorReason = '复核后改判正确' + (m.errorReason ? '（' + m.errorReason + '）' : '');
+        if (m.correctAnswer) q.correctAnswer = m.correctAnswer;
+        if (m.solutionSteps && m.solutionSteps.length) q.solutionSteps = m.solutionSteps;
+        if (fresh) q.studentAnswer = fresh;
+        changed++;
+      } else if (/存疑/.test(String(m.verdict || ''))) {
+        q.isCorrect = false;
+        q.verdict = '存疑（复核无法确定）';
+        q.errorReason = m.errorReason || q.errorReason;
+        changed++;
+      } else if (!stable) {
+        // 两次读图读出来的手写内容都不一样 → 不判错，交给人工核对
+        q.isCorrect = false;
+        q.verdict = '存疑（两次识别不一致）';
+        q.errorReason = '两次读图结果不一致：第一次读到「' + String(q.studentAnswer || '').slice(0, 60)
+          + '」，复核读到「' + String(fresh || '').slice(0, 60) + '」。为避免冤枉学生，本题不计入错误；'
+          + '你可以点右边的「✎ 手写识别错了？点这里修正」按手写原文改一下再重判。';
+        changed++;
+      } else if (!ansStable) {
+        // 连"正确答案"两次都算得不一样 → 说明模型自己没算准，不判学生错
+        q.isCorrect = false;
+        q.verdict = '存疑（两次算出的答案不一致）';
+        q.errorReason = '两次批改给出的正确答案不同：第一次是「' + String(q.correctAnswer || '').slice(0, 50)
+          + '」，复核是「' + String(m.correctAnswer || '').slice(0, 50) + '」。模型自己没算稳，本题不计入错误，建议人工核对。';
+        changed++;
+      } else if (answerMatches(m.correctAnswer || q.correctAnswer, q.studentAnswer)) {
+        // 复核自己也承认答案一致，却还在挑过程的毛病 → 按答案判对，过程疑问只作提示
+        q.isCorrect = true;
+        q.verdict = '正确（过程存疑）';
+        q.processNote = m.errorReason || q.errorReason;
+        q.errorReason = '过程提示：' + String(m.errorReason || q.errorReason || '').slice(0, 200);
+        if (m.correctAnswer) q.correctAnswer = m.correctAnswer;
+        changed++;
+      } else if (m.errorReason) {
+        q.errorReason = m.errorReason;
+      }
+    });
+    a.rechecked = true;
+    a.recheckChanged = changed;
+    return a;
+  }
+
+  function normalize(d) {
+    d = d || {};
+    var qs = Array.isArray(d.questions) ? d.questions : (d.questions ? [d.questions] : []);
+    qs = qs.map(function (q, i) {
+      q = q || {};
+      var kps = Array.isArray(q.knowledgePoints) ? q.knowledgePoints : (q.knowledgePoints ? [q.knowledgePoints] : []);
+      kps = kps.map(function (k) {
+        if (typeof k === 'string') return { name: k };
+        return k || {};
+      });
+      var steps = Array.isArray(q.solutionSteps) ? q.solutionSteps : (q.solutionSteps ? [q.solutionSteps] : []);
+      var verdict = q.verdict || (q.isCorrect ? '正确' : '错误');
+      var sa = q.studentAnswer || q.answer || '（未识别到作答）';
+      var pending = /未作答|无法判定|存疑/.test(String(verdict)) || /^\s*未作答\s*$/.test(String(sa));
+      return {
+        no: q.no || String(i + 1),
+        stem: collapseRepeat(q.stem || q.question || '（未识别到题干）'),
+        studentAnswer: collapseRepeat(sa),
+        correctAnswer: collapseRepeat(q.correctAnswer || q.rightAnswer || '（未给出）'),
+        isCorrect: q.isCorrect === true || /^正确$/.test(String(verdict)),
+        pending: pending,
+        verdict: verdict,
+        errorReason: q.errorReason || q.reason || '',
+        solutionSteps: steps.map(function (s) { return collapseRepeat(String(s)); })
+          .filter(function (s, idx, arr) { return s && arr.indexOf(s) === idx; }),
+        knowledgePoints: kps.filter(function (k, idx) {
+          var nm = String((k && k.name) || '').trim();
+          return kps.findIndex(function (x) { return String((x && x.name) || '').trim() === nm; }) === idx;
+        }),
+        confidence: q.confidence || ''
+      };
+    });
+    var correct = qs.filter(function (q) { return q.isCorrect; }).length;
+    var pending = qs.filter(function (q) { return !q.isCorrect && q.pending; }).length;
+    var wrong = qs.length - correct - pending;
+    // 硬规则：模型自己给的正确答案与学生写的最终答案数值一致时，不许判错，只作过程提示
+    qs.forEach(function (q) {
+      if (q.isCorrect || q.pending) return;
+      if (!answerMatches(q.correctAnswer, q.studentAnswer)) return;
+      q.isCorrect = true;
+      q.verdict = '正确（过程存疑）';
+      q.errorReason = '过程提示：' + String(q.errorReason || '').slice(0, 200);
+    });
+    correct = qs.filter(function (q) { return q.isCorrect; }).length;
+    pending = qs.filter(function (q) { return !q.isCorrect && q.pending; }).length;
+    wrong = qs.length - correct - pending;
+    var ov = d.overall || {};
+    return {
+      subject: d.subject || '', grade: d.grade || '',
+      crossChecked: !!d.crossChecked,
+      crossDiff: d.crossDiff || 0,
+      rechecked: !!d.rechecked,
+      recheckChanged: d.recheckChanged || 0,
+      questions: qs,
+      overall: {
+        correct: correct,
+        wrong: wrong,
+        pending: pending,
+        scoreText: '对 ' + correct + ' 题 / 共 ' + qs.length + ' 题' + (pending ? '（' + pending + ' 题未作答或存疑，未计入错误）' : ''),
+        weakPoints: Array.isArray(ov.weakPoints) ? ov.weakPoints : (ov.weakPoints ? [String(ov.weakPoints)] : []),
+        advice: ov.advice || ''
+      }
+    };
+  }
+
+  /* ---------------- 渲染 ---------------- */
+  function render() {
+    if (!result) return;
+    $('resultBox').classList.remove('hid');
+    var qs = result.questions, ov = result.overall;
+    var graded = ov.correct + ov.wrong;
+    var rate = graded ? Math.round((ov.correct / graded) * 100) : 0;
+    if (result.ocrText) {
+      $('ocrCard').classList.remove('hid');
+      $('ocrTextBox').textContent = result.ocrText;
+    } else {
+      $('ocrCard').classList.add('hid');
+    }
+
+    var stats = [
+      stat('blue', '📝', '题目数', qs.length),
+      stat('green', '✔', '答对', ov.correct),
+      stat('red', '✘', '答错 / 部分正确', ov.wrong)
+    ];
+    if (ov.pending) stats.push(stat('amber', '—', '未作答 / 存疑', ov.pending));
+    stats.push(stat('purple', '🎯', graded ? '正确率（已作答）' : '正确率', rate + '%'));
+    $('summary').innerHTML = '<div class="stats">' + stats.join('') + '</div>'
+      + '<div class="stWide">'
+      + '<div class="row" style="gap:6px">'
+      + '<span class="chip blue">' + esc(ov.scoreText || '') + '</span>'
+      + (result.subject ? '<span class="chip">' + esc(result.subject) + '</span>' : '')
+      + (result.grade ? '<span class="chip">' + esc(result.grade) + '</span>' : '')
+      + (ov.pending ? '<span class="chip amber">未作答不计入错误</span>' : '')
+      + '<span class="grow"></span><span class="dshell-muted">正确率按已作答题目计算</span>'
+      + '</div>'
+      + '<div class="dshell-progress" style="margin-top:8px"><div class="dshell-progressBar" style="width:' + rate + '%"></div></div>'
+      + '</div>';
+
+    // 一、题目与答案
+    $('secQA').innerHTML = qs.map(function (q, qi) {
+      return '<div class="qcard" id="qa-' + qi + '">'
+        + '<div class="qhead"><span class="numBadge">' + esc(q.no) + '</span>'
+        + '<span class="qno">第 ' + esc(q.no) + ' 题</span>'
+        + (q.confidence === 'low' ? '<span class="chip amber">⚠ 识别存疑</span>' : '<span class="chip blue">题目原文</span>')
+        + '</div>'
+        + '<div class="stemBox math">' + math(q.stem) + '</div>'
+        + '<div class="ansBox green"><div class="al">✔ 正确答案</div><div class="math">' + math(q.correctAnswer) + '</div></div>'
+        + (q.solutionSteps.length ? '<ol class="steps math">' + q.solutionSteps.map(function (s) { return '<li>' + math(s) + '</li>'; }).join('') + '</ol>' : '')
+        + '</div>';
+    }).join('') || '<div class="empty"><div class="ei">🤔</div><div class="et">没有解析出题目，换一张更清晰的照片再试一次。</div></div>';
+
+    // 二、正误判定
+    $('secJudge').innerHTML = qs.map(function (q, qi) {
+      var ok = q.isCorrect;
+      var pend = !ok && q.pending;
+      var cls = ok ? 'ok' : (pend ? 'pend' : 'bad');
+      var ico = ok ? '✔' : (pend ? '—' : '✘');
+      var mark = ok ? (/过程存疑/.test(String(q.verdict)) ? '正确（过程存疑）' : '正确')
+        : (pend ? (/存疑/.test(q.verdict) ? '存疑·建议复核' : (/无法判定/.test(q.verdict) ? '无法判定' : '未作答'))
+          : (q.verdict === '部分正确' ? '部分正确' : '错误'));
+      var chipCls = ok ? 'green' : (pend ? 'amber' : 'red');
+      var fixed = Object.prototype.hasOwnProperty.call(corrections, String(q.no));
+      return '<div class="judge ' + cls + '" id="jd-' + qi + '">'
+        + '<div class="jIco ' + cls + '">' + ico + '</div>'
+        + '<div class="jBody">'
+        + '<div class="jTitle">第 ' + esc(q.no) + ' 题 <span class="chip ' + chipCls + '">' + mark + '</span>'
+        + (q.confidence === 'low' ? '<span class="chip amber">识别存疑</span>' : '')
+        + (fixed ? '<span class="chip purple">已人工修正</span>' : '')
+        + '<span class="grow"></span>'
+        + '<button class="dshell-btn dshell-btnGhost" type="button" data-fix="' + esc(q.no) + '" style="padding:2px 9px;font-size:11px">✎ 手写识别错了？点这里修正</button>'
+        + '</div>'
+        + '<div class="line"><span class="lb">学生作答</span><span class="math">' + math(q.studentAnswer) + '</span></div>'
+        + '<div class="fixBox hid" data-fixbox="' + esc(q.no) + '" style="margin-top:6px">'
+        + '<textarea class="dshell-input" rows="3" data-fa="' + esc(q.no) + '">' + esc(fixed ? corrections[String(q.no)] : q.studentAnswer) + '</textarea>'
+        + '<div class="row" style="margin-top:6px">'
+        + '<button class="dshell-btn" type="button" data-fsavego="' + esc(q.no) + '">保存并重新判卷</button>'
+        + '<button class="dshell-btn dshell-btnGhost" type="button" data-fsave="' + esc(q.no) + '">只保存</button>'
+        + '<button class="dshell-btn dshell-btnGhost" type="button" data-fcancel="' + esc(q.no) + '">取消</button>'
+        + '<span class="dshell-muted">按手写原文改一下（例如把 ∠AGC 改成 ∠DGC），改完点「保存并重新判卷」即可</span>'
+        + '</div>'
+        + '</div>'
+        + ((ok || pend) ? '' : '<div class="line"><span class="lb">正确答案</span><span class="math" style="color:var(--hw-ok);font-weight:600">' + math(q.correctAnswer) + '</span></div>')
+        + (function () {
+          var r = String(q.errorReason || '');
+          if (!r || /^无$/.test(r)) return '';
+          var isNote = /^过程提示/.test(r);
+          if (ok && !isNote) return '';
+          return '<div class="line' + (isNote ? '' : ' err') + '"><span class="lb">' + (isNote ? '过程提示' : '错因') + '</span>'
+            + esc(r.replace(/^过程提示：/, '')) + '</div>';
+        })()
+        + (pend ? '<div class="dshell-muted">' + (/存疑/.test(q.verdict)
+          ? '模型结论与图中已有的解答不一致，已按「存疑」处理、不计入错误，建议人工复核这一步。'
+          : '这张图里没有检测到作答，判卷只在有作答时生效；若学生确实写了，请重拍更清晰的照片再批改。') + '</div>' : '')
+        + '</div></div>';
+    }).join('') || '<div class="empty"><div class="ei">📄</div><div class="et">没有判卷结果。</div></div>';
+
+    // 三、知识点分析
+    var kpHtml = qs.map(function (q, qi) {
+      if (!q.knowledgePoints.length) return '';
+      return '<div class="qcard" id="kp-' + qi + '">'
+        + '<div class="qhead"><span class="numBadge purple">' + esc(q.no) + '</span>'
+        + '<span class="qno">第 ' + esc(q.no) + ' 题</span>'
+        + q.knowledgePoints.map(function (k) { return '<span class="kpTag">' + esc(k.name || '知识点') + '</span>'; }).join('')
+        + '</div>'
+        + q.knowledgePoints.map(function (k) {
+          return '<div style="margin-bottom:8px">'
+            + '<div class="kpName">💡 ' + esc(k.name || '') + '</div>'
+            + (k.explain ? '<div class="kpExplain">' + esc(k.explain) + '</div>' : '')
+            + (k.pitfall ? '<div class="kpPit">⚠ 易错点：' + esc(k.pitfall) + '</div>' : '')
+            + (k.variant ? '<div class="kpVar">🎯 举一反三：<span class="math">' + math(k.variant) + '</span>'
+              + (k.variantAnswer ? '<div class="vv">参考答案：<span class="math">' + math(k.variantAnswer) + '</span></div>' : '')
+              + '</div>' : '')
+            + '</div>';
+        }).join('')
+        + '</div>';
+    }).join('');
+    $('secKP').innerHTML = kpHtml || '<div class="empty"><div class="ei">🎉</div><div class="et">本次没有需要复盘的知识点，全部掌握得不错。</div></div>';
+    $('overall').innerHTML = (ov.weakPoints.length || ov.advice)
+      ? '<div class="advice">'
+      + '<div><b>薄弱知识点：</b>' + (ov.weakPoints.map(function (w) { return '<span class="chip red">' + esc(w) + '</span>'; }).join(' ') || '—') + '</div>'
+      + (ov.advice ? '<div style="margin-top:6px"><b>老师建议：</b>' + esc(ov.advice) + '</div>' : '')
+      + '</div>'
+      : '';
+  }
+  function stat(color, ico, label, value) {
+    return '<div class="st ' + esc(color) + '"><i>' + esc(ico) + '</i><div>'
+      + '<div class="l">' + esc(label) + '</div><div class="v">' + esc(value) + '</div></div></div>';
+  }
+
+  /* ---------------- 导出 ---------------- */
+  function exportMd() {
+    if (!result) { say('还没有批改结果可导出。', 'bad'); return; }
+    var L = [];
+    L.push('# 作业批改报告');
+    L.push('');
+    L.push('- 时间：' + new Date().toLocaleString());
+    if (result.subject || result.grade) L.push('- 学科 / 年级：' + (result.subject || '—') + ' / ' + (result.grade || '—'));
+    L.push('- ' + (result.overall.scoreText || ''));
+    L.push('');
+    L.push('## 一、题目与答案');
+    result.questions.forEach(function (q) {
+      L.push('');
+      L.push('### 第 ' + q.no + ' 题');
+      L.push('');
+      L.push('**题目**：' + q.stem);
+      L.push('');
+      L.push('**正确答案**：' + q.correctAnswer);
+      if (q.solutionSteps.length) {
+        L.push('');
+        L.push('**解题步骤**：');
+        q.solutionSteps.forEach(function (s, i) { L.push((i + 1) + '. ' + s); });
+      }
+    });
+    L.push('');
+    L.push('## 二、正误判定');
+    L.push('');
+    L.push('| 题号 | 判定 | 学生作答 | 正确答案 | 错因 |');
+    L.push('| --- | --- | --- | --- | --- |');
+    result.questions.forEach(function (q) {
+      L.push('| ' + q.no + ' | ' + (q.isCorrect ? '正确' : (q.verdict || '错误')) + ' | '
+        + String(q.studentAnswer).replace(/\|/g, '/').replace(/\n/g, ' ') + ' | '
+        + String(q.correctAnswer).replace(/\|/g, '/').replace(/\n/g, ' ') + ' | '
+        + String(q.errorReason || '').replace(/\|/g, '/').replace(/\n/g, ' ') + ' |');
+    });
+    L.push('');
+    L.push('## 三、知识点分析');
+    result.questions.forEach(function (q) {
+      if (!q.knowledgePoints.length) return;
+      L.push('');
+      L.push('### 第 ' + q.no + ' 题');
+      q.knowledgePoints.forEach(function (k) {
+        L.push('');
+        L.push('- **' + (k.name || '') + '**：' + (k.explain || ''));
+        if (k.pitfall) L.push('  - 易错点：' + k.pitfall);
+        if (k.variant) L.push('  - 举一反三：' + k.variant);
+        if (k.variantAnswer) L.push('  - 参考答案：' + k.variantAnswer);
+      });
+    });
+    L.push('');
+    if (result.overall.weakPoints.length) L.push('**薄弱知识点**：' + result.overall.weakPoints.join('、'));
+    if (result.overall.advice) L.push('');
+    if (result.overall.advice) L.push('**建议**：' + result.overall.advice);
+    download('作业批改报告-' + new Date().toISOString().slice(0, 10) + '.md', L.join('\n'));
+  }
+
+  /* ---------------- 示例 ---------------- */
+  function sample() {
+    result = normalize({
+      subject: '数学', grade: '八年级',
+      questions: [
+        {
+          no: '1', stem: '解方程：$x^2-5x+6=0$',
+          studentAnswer: '$x^2-5x+6=0$ → $(x-2)(x-3)=0$ → $x_1=2,\\ x_2=3$',
+          correctAnswer: '$x_1=2,\\ x_2=3$',
+          isCorrect: true, verdict: '正确', errorReason: '无',
+          solutionSteps: ['因式分解：$x^2-5x+6=(x-2)(x-3)$', '令各因式为 0：$x-2=0$ 或 $x-3=0$', '解得 $x_1=2,\\ x_2=3$'],
+          knowledgePoints: [{
+            name: '十字相乘法分解因式', explain: '把二次三项式拆成两个一次因式的乘积，关键是找到两数之积为常数项、之和为一次项系数。',
+            pitfall: '常数项为正、一次项为负时，两个因数应同为负，容易写成正数。',
+            variant: '解方程 $x^2-7x+12=0$', variantAnswer: '$x_1=3,\\ x_2=4$'
+          }],
+          confidence: 'high'
+        },
+        {
+          no: '2', stem: '一个直角三角形的两条直角边分别为 6 和 8，求斜边长。',
+          studentAnswer: '6+8=14，所以斜边是 14',
+          correctAnswer: '10',
+          isCorrect: false, verdict: '错误', errorReason: '概念错误：把两条直角边直接相加，直角三角形求斜边应用勾股定理 $a^2+b^2=c^2$。',
+          solutionSteps: ['由勾股定理：$c^2=6^2+8^2$', '$c^2=36+64=100$', '$c=10$'],
+          knowledgePoints: [{
+            name: '勾股定理', explain: '直角三角形两条直角边的平方和等于斜边的平方，即 $a^2+b^2=c^2$，其中 $c$ 是斜边（最长边）。',
+            pitfall: '把斜边当成直角边代入，或忘记开平方；本题错在直接用加法代替平方和。',
+            variant: '直角边为 9 和 12，求斜边长。', variantAnswer: '15'
+          }],
+          confidence: 'high'
+        },
+        {
+          no: '3', stem: '化简：$\\frac{2x}{x-1}-\\frac{2}{x-1}$',
+          studentAnswer: '$\\frac{2x-2}{x-1}=\\frac{2(x-1)}{x-1}=2$（未写 $x\\neq 1$）',
+          correctAnswer: '$2$（$x\\neq 1$）',
+          isCorrect: false, verdict: '部分正确',
+          errorReason: '计算正确，但漏写分式有意义的前提条件 $x\\neq 1$，属于漏解 / 条件缺失。',
+          solutionSteps: ['同分母相减：$\\frac{2x-2}{x-1}$', '分子因式分解：$\\frac{2(x-1)}{x-1}$', '约分得 $2$，并注明 $x\\neq 1$'],
+          knowledgePoints: [{
+            name: '分式的化简与取值条件', explain: '分式的分母不能为 0，化简前后都要保证原式有意义，因此结果需附上使分母不为零的条件。',
+            pitfall: '只做约分不写限制条件，考试中通常要扣分。',
+            variant: '化简 $\\frac{3x}{x+2}-\\frac{6}{x+2}$，并写出取值范围。', variantAnswer: '$3$（$x\\neq -2$）'
+          }],
+          confidence: 'high'
+        }
+      ],
+      overall: {
+        correct: 1, wrong: 2, scoreText: '对 1 题 / 共 3 题',
+        weakPoints: ['勾股定理', '分式的取值条件'],
+        advice: '基础因式分解掌握得不错；建议重点复习勾股定理的适用条件和分式化简的书写规范，做题时先把「限制条件」写出来。'
+      }
+    });
+    render();
+    badge('bdStep', '示例结果', '');
+    setCaptureCollapsed(true);
+    $('resultBox').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    say('这是示例数据的展示效果，点「清空」后即可拍自己的作业。');
+  }
+
+  /* ---------------- 事件绑定 ---------------- */
+  $('btnCam').addEventListener('click', startCam);
+  $('btnSnap').addEventListener('click', snap);
+  $('btnCamOff').addEventListener('click', stopCam);
+  $('btnFlip').addEventListener('click', function () {
+    facing = facing === 'environment' ? 'user' : 'environment';
+    startCam();
+  });
+  $('btnUpload').addEventListener('click', function () { $('file').click(); });
+  $('file').addEventListener('change', async function (e) {
+    var fs = Array.prototype.slice.call(e.target.files || []);
+    for (var i = 0; i < fs.length; i++) {
+      try { addPhoto(await fileToDataUrl(fs[i], 2400)); }
+      catch (err) { say('有一张图片读取失败：' + err.message, 'bad'); }
+    }
+    e.target.value = '';
+  });
+  $('btnPasteTip').addEventListener('click', function () {
+    say(inIframe()
+      ? '在浏览器里复制图片后，点一下这个窗口再按 Ctrl+V 即可粘贴；若粘贴无效，请点右上角「在新窗口打开」后再粘贴。'
+      : '复制图片后直接按 Ctrl+V 即可。');
+  });
+  document.addEventListener('paste', async function (e) {
+    var items = (e.clipboardData && e.clipboardData.items) ? Array.prototype.slice.call(e.clipboardData.items) : [];
+    var got = 0;
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].type && items[i].type.indexOf('image/') === 0) {
+        var f = items[i].getAsFile();
+        if (f) { try { addPhoto(await fileToDataUrl(f, 2400)); got++; } catch (err) { } }
+      }
+    }
+    if (got) e.preventDefault();
+  });
+  $('btnGrade').addEventListener('click', function () { grade(false); });
+  $('btnRegrade').addEventListener('click', function () { grade(false); });
+  $('btnRefix').addEventListener('click', function () { grade(true); });
+  $('btnCapToggle').addEventListener('click', function () {
+    setCaptureCollapsed(!$('capBody').classList.contains('hid'));
+  });
+  $('btnReload').addEventListener('click', function () {
+    say('正在刷新这个窗口…');
+    try { location.reload(); } catch (e) { }
+  });
+
+  /* 逐题「修正识别」的交互（事件委托，render 重建 DOM 后依然有效） */
+  (function bindJudgeFix() {
+    var box = $('secJudge');
+    function sel(v) { return String(v).replace(/["\\]/g, '\\$&'); }
+    box.addEventListener('click', function (e) {
+      var t = e.target;
+      if (!t || !t.getAttribute) return;
+      var no = t.getAttribute('data-fix');
+      if (no !== null && no !== undefined) {
+        var fb = box.querySelector('[data-fixbox="' + sel(no) + '"]');
+        if (fb) fb.classList.toggle('hid');
+        return;
+      }
+      var no = t.getAttribute('data-fsavego');
+      if (no !== null && no !== undefined) {
+        var ta2 = box.querySelector('[data-fa="' + sel(no) + '"]');
+        if (ta2 && ta2.value.trim()) corrections[String(no)] = ta2.value.trim();
+        if (!Object.keys(corrections).length) { say('没有内容可判，先改一下识别文本。', 'bad'); return; }
+        grade(true);
+        return;
+      }
+      no = t.getAttribute('data-fsave');
+      if (no !== null && no !== undefined) {
+        var ta = box.querySelector('[data-fa="' + sel(no) + '"]');
+        if (ta && ta.value.trim()) {
+          corrections[String(no)] = ta.value.trim();
+          if (result) render();
+          syncFixUI();
+          say('已记录第 ' + no + ' 题的手写修正。可继续改其它题，全部改完后点结果区底部的「按修正后的文本重新判卷」。', 'ok');
+        }
+        return;
+      }
+      no = t.getAttribute('data-fcancel');
+      if (no !== null && no !== undefined) {
+        delete corrections[String(no)];
+        if (result) render();
+        syncFixUI();
+      }
+    });
+  })();
+  $('btnSample').addEventListener('click', sample);
+  $('btnExport').addEventListener('click', exportMd);
+  $('btnClear').addEventListener('click', function () {
+    photos = [];
+    result = null;
+    corrections = {};
+    renderThumbs();
+    $('resultBox').classList.add('hid');
+    try { localStorage.removeItem(LS_RES); } catch (e) { }
+    syncFixUI();
+    setCaptureCollapsed(false);
+    badge('bdStep', '待采集');
+    say('已清空。');
+  });
+  $('btnTestOcr').addEventListener('click', async function () {
+    say('正在测试本机 OCR（' + ocrBase() + '）…');
+    var h = await ocrHealth();
+    if (h && h.ok) {
+      badge('bdOcr', '本机OCR 在线 · ' + (h.engine || ''), 'ok');
+      var probe = photos.length ? '已用当前第 1 张照片试跑…' : '（采集区还没有照片，先拍一张再点这里可以试跑识别）';
+      say('本机 OCR 在线：引擎 ' + (h.engine || '未知') + '。' + probe, 'ok');
+      if (photos.length) {
+        try {
+          var txt = await ocrTranscribe();
+          say('试跑成功，识别到 ' + txt.replace(/\s/g, '').length + ' 字：' + txt.replace(/\s+/g, ' ').slice(0, 120), 'ok');
+        } catch (e) {
+          say('试跑失败：' + ((e && e.message) || e), 'bad');
+        }
+      }
+    } else {
+      badge('bdOcr', '本机OCR 未启动', 'wait');
+      say('连不上本机 OCR 服务（' + ocrBase() + '）。请双击项目文件夹里的「作业批改-启动OCR.bat」，看到“监听地址”后回来再点一次。', 'bad');
+    }
+  });
+  $('btnSave').addEventListener('click', saveSettings);
+  /* 点批注图上的题框 → 跳到该题答案与讲解 */
+  (function bindMarkHotspots() {
+    var wrap = $('markWrap');
+    wrap.addEventListener('click', function (e) {
+      var t = e.target;
+      while (t && t !== wrap) {
+        if (t.getAttribute && t.getAttribute('data-jump') !== null) {
+          jumpToQuestion(Number(t.getAttribute('data-jump')));
+          return;
+        }
+        t = t.parentNode;
+      }
+    });
+  })();
+  $('btnRemark').addEventListener('click', async function () {
+    if (!result || !result.questions || !result.questions.length) { say('还没有批改结果，先批改一次。', 'bad'); return; }
+    if (!photos.length) { say('照片已不在内存里（窗口重载过）：请把作业照片重新粘贴/上传一张，再点「只重新标注」。', 'bad'); return; }
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = '标注中…';
+    try {
+      $('progBox').classList.remove('hid');
+      $('markCard').classList.remove('hid');
+      $('markWrap').innerHTML = '<div class="empty"><div class="ei">🖍️</div><div class="et">正在定位作答位置并重新标注…</div></div>';
+      var marked = await buildAnnotation();
+      if (marked) { showAnnotation(marked); $('markCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      else say('没生成出批注图。', 'bad');
+    } catch (e) {
+      say('重新标注失败：' + ((e && e.message) || e), 'bad');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '只重新标注';
+      $('progBox').classList.add('hid');
+    }
+  });
+  $('btnSaveMark').addEventListener('click', function () {
+    if (!lastMarkUrl) { say('还没有批注图可下载。', 'bad'); return; }
+    var a = document.createElement('a');
+    a.href = lastMarkUrl;
+    a.download = '作业批改-标注图-' + new Date().toISOString().slice(0, 10) + '.jpg';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { a.remove(); }, 1500);
+    say('批注图已开始下载。', 'ok');
+  });
+  $('btnDetect').addEventListener('click', detectModel);
+  $('btnResetCfg').addEventListener('click', function () {
+    try { localStorage.removeItem(LS_SET); } catch (e) { }
+    fillSettingsForm();
+    probeRelay();
+    say('已恢复默认设置：地址 ' + DEFAULT_SETTINGS.apiBaseUrl + '，模型 ' + DEFAULT_SETTINGS.model + '。直接点「开始批改」即可。', 'ok');
+  });
+  $('btnTest').addEventListener('click', async function () {
+    say('正在自检…');
+    await probeRelay();
+    var s = readSettings();
+    var chs = channels();
+    var lines = ['中转：' + (relayAlive ? '在线' : '离线')];
+    for (var i = 0; i < chs.length; i++) {
+      var ch = chs[i];
+      try {
+        var ctl = new AbortController();
+        var t = setTimeout(function () { ctl.abort(); }, 30000);
+        var r = await fetch(ch.base + '/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + (ch.key || 'relay') },
+          body: JSON.stringify({ model: s.model, messages: [{ role: 'user', content: '回复两个字：可用' }], max_tokens: 8 }),
+          signal: ctl.signal
+        });
+        clearTimeout(t);
+        var txt = await r.text();
+        lines.push(ch.name + '：' + (r.ok ? '可用 ✔ ' : ('失败 ✘ HTTP ' + r.status + ' · ' + txt.slice(0, 120))));
+      } catch (e) {
+        var m = (e && e.message) || String(e);
+        lines.push(ch.name + '：失败 ✘ ' + (/Failed to fetch|NetworkError|Load failed/i.test(m)
+          ? '浏览器被跨域/网络拦住（请启动本机中转）' : m.slice(0, 140)));
+      }
+    }
+    var ok = lines.join(' ').indexOf('可用 ✔') >= 0;
+    say(lines.join('　|　'), ok ? 'ok' : 'bad');
+  });
+  $('btnStandalone').addEventListener('click', function () {
+    try {
+      if (/^https?:/.test(location.protocol)) window.open(location.href, '_blank');
+      else say('当前是通过本地文件打开的，请直接在浏览器里打开这个 HTML 文件，或用工作台的「浏览器」窗口打开。');
+    } catch (e) {
+      say('请手动把本窗口的地址复制到新标签页打开。');
+    }
+  });
+  window.addEventListener('beforeunload', function () { if (stream) stopCam(); });
+
+  /* ---------------- 启动 ---------------- */
+  fillSettingsForm();
+  renderThumbs();
+  // 自动更新：每 15 秒、以及窗口重新获得焦点时，比对磁盘上的版本
+  setInterval(checkUpdate, 15000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) checkUpdate(); });
+  window.addEventListener('focus', checkUpdate);
+  setTimeout(checkUpdate, 1500);
+  try {
+    var saved = localStorage.getItem(LS_RES);
+    if (saved) {
+      result = normalize(JSON.parse(saved));
+      render();
+      setCaptureCollapsed(true);          // 打开窗口就直接停在上次的批改结果上
+      badge('bdStep', '上次批改结果', '');
+    }
+  } catch (e) { }
+  probeRelay().then(function () { setTimeout(ensureModel, 600); });
+  probeOcr();
+})();
+</script>
+</body>
+</html>

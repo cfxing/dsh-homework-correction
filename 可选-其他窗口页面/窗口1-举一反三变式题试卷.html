@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>举一反三 · 变式题试卷（窗口1）</title>
+  <link rel="stylesheet" href="/api/worktable/template/dshell.css" />
+  <style>
+    /* —— 最小自造样式：试卷图片墙 / 版式预览 / 放大层 —— */
+    .panel{display:none}.panel.on{display:block}
+    .ph{opacity:.42}
+    .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .row .spacer{flex:1}
+    .paperGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px;margin-top:12px}
+    .paperCard{background:rgba(127,127,127,.07);border:1px solid rgba(127,127,127,.16);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;cursor:zoom-in}
+    .paperCard:hover{border-color:rgba(120,140,255,.55)}
+    .paperCard img{width:100%;display:block;background:#fff}
+    .paperBody{padding:8px 10px 10px}
+    .paperName{font-size:12.5px;line-height:1.4;word-break:break-all;margin-bottom:6px}
+    .paperActs{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+    .slot{margin-top:12px;border:1.5px dashed rgba(127,127,127,.45);border-radius:12px;padding:20px;text-align:center;background:rgba(127,127,127,.05)}
+    .slot:hover{border-color:rgba(120,140,255,.6)}
+    .slot .big{font-size:15px;margin-bottom:6px}
+    .slot .small{font-size:12px;opacity:.75;line-height:1.75}
+    .sheet{background:#fbfbfd;color:#1d2129;border-radius:8px;padding:22px 24px;margin-top:12px;border:1px solid rgba(127,127,127,.22);max-width:760px}
+    .sheet h2{margin:0 0 2px;font-size:17px;text-align:center;letter-spacing:1px}
+    .sheet .meta{text-align:center;font-size:11.5px;color:#5c6472;margin-bottom:14px}
+    .sheet .sec{font-size:13px;font-weight:700;margin:14px 0 6px;border-left:3px solid #4f8ef7;padding-left:7px}
+    .sheet .q{font-size:12px;color:#2b303b;line-height:1.85;margin:6px 0}
+    .sheet .ln{border-bottom:1px dashed #c8ccd6;height:16px;margin:4px 0}
+    .sheet .note{font-size:11px;color:#7a8291;margin-top:12px;text-align:center}
+    .modal{position:fixed;inset:0;z-index:9999;background:rgba(8,11,22,.92);backdrop-filter:blur(3px);display:none;overflow:auto;padding:54px 20px 44px;text-align:center}
+    .modal.open{display:block}
+    /* 面板全屏（沉浸式）：只留图片，铺满整个窗口宽度，可上下滚动看完整长卷 */
+    .modal.immersive{padding:0;background:#0a0d14}
+    .modal.immersive img{width:100%;max-width:none;border-radius:0;box-shadow:none}
+    .modal.immersive .modalCap{position:fixed;left:0;right:0;bottom:0;margin:0;background:rgba(8,11,22,.82);padding:6px 12px;font-size:12px}
+    .modal img{width:min(96vw,1500px);height:auto;background:#fff;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,.55);cursor:zoom-out;margin:0 auto}
+    .modal-x{position:fixed;top:12px;right:20px;font-size:26px;line-height:1;cursor:pointer;opacity:.9;user-select:none;color:#fff;z-index:10001}
+    .modal-x:hover{opacity:1}
+    .modalCap{margin:12px auto 0;color:#fff;font-size:13px;max-width:min(96vw,1500px);text-align:center;word-break:break-all;line-height:1.7}
+    code.k{font-size:11.5px;padding:1px 6px;border-radius:5px;background:rgba(127,127,127,.16)}
+  </style>
+</head>
+<body>
+  <div class="dshell">
+    <!-- 标题区 -->
+    <h1 class="dshell-title">举一反三 · 变式题试卷</h1>
+    <p class="dshell-sub">项目「举一反三」窗口1：原题「椭圆 x²/9 + y²/4 = 1 上一点 M 到两焦点距离之积 |MF₁|·|MF₂| 的最大值」的同源变式卷——相似题 3 道 + 变式题 3 道 + 综合运用题 2 道，排成一张试卷以图片形式展示，双击可面板全屏、可另存/打印。</p>
+
+    <!-- 状态徽标 -->
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px">
+      <span class="dshell-badge" id="bdWin">窗口1 · 举一反三</span>
+      <span class="dshell-badge dshell-badgeWait" id="bdPaper">试卷图片：等待生成</span>
+      <span class="dshell-badge dshell-badgeDone" id="bdOK" style="display:none">试卷已就位</span>
+      <span class="dshell-badge dshell-badgeDone" id="bdAuto">自动刷新：开</span>
+      <span class="dshell-badge">原题 → 窗口2</span>
+      <span class="dshell-badge">知识点 / 解法 → 窗口3</span>
+    </div>
+
+    <!-- 统计 -->
+    <div class="dshell-grid">
+      <div class="dshell-stat"><div class="dshell-statLabel">试卷张数</div><div class="dshell-statValue" id="sPaper">0</div></div>
+      <div class="dshell-stat"><div class="dshell-statLabel">相似题</div><div class="dshell-statValue">3</div><div class="dshell-statDelta">同知识点同方法</div></div>
+      <div class="dshell-stat"><div class="dshell-statLabel">变式题</div><div class="dshell-statValue">3</div><div class="dshell-statDelta">换条件 / 换问法</div></div>
+      <div class="dshell-stat"><div class="dshell-statLabel">综合运用题</div><div class="dshell-statValue">1–2</div><div class="dshell-statDelta">多知识点串联</div></div>
+    </div>
+
+    <!-- 标签页 -->
+    <div class="dshell-tabs" style="margin-top:14px">
+      <button class="dshell-tab dshell-tabOn" data-panel="pPaper">📄 试卷图片</button>
+      <button class="dshell-tab" data-panel="pPlan">🧩 试卷版式</button>
+      <button class="dshell-tab" data-panel="pHow">ℹ 使用说明</button>
+    </div>
+
+    <!-- ============ 试卷图片 ============ -->
+    <div class="panel on" id="pPaper">
+      <div class="row" style="margin-top:12px">
+        <button class="dshell-btn" id="btnReload">↻ 刷新试卷</button>
+        <button class="dshell-btn dshell-btnGhost" id="btnAuto">⏸ 暂停自动刷新</button>
+        <span class="dshell-muted" id="stPaper">正在检查试卷图片…</span>
+        <span class="dshell-muted" id="stAuto"></span>
+        <div class="spacer"></div>
+        <span class="dshell-muted">单击放大 · <strong>双击面板全屏</strong> · 卡片可另存 / 打印</span>
+      </div>
+
+      <div class="paperGrid" id="grid"></div>
+
+      <div class="slot" id="slot">
+        <div class="big">试卷图片位置 —— 目前为空</div>
+        <div class="small">
+          原题发来后，我会按「相似题 3 道 → 变式题 3 道 → 综合运用题 1–2 道」排成一张试卷，<br />
+          渲染成高清长图放在这里，同时把这张卷也能另存 / 打印。<br />
+          预期文件：<code class="k">举一反三-变式卷.png</code>（多张按 <code class="k">-01 / -02</code> 续号）
+        </div>
+        <div style="margin-top:12px"><button class="dshell-btn dshell-btnGhost" id="btnPlan">先看试卷版式 →</button></div>
+      </div>
+    </div>
+
+    <!-- ============ 试卷版式 ============ -->
+    <div class="panel" id="pPlan">
+      <div class="row" style="margin-top:12px">
+        <span class="dshell-muted">下面是这张试卷的固定版式（内容待原题确定后填入，题目会以图片形式出图）。</span>
+      </div>
+
+      <div class="sheet">
+        <h2>举一反三 · 同源变式训练卷</h2>
+        <div class="meta">考查知识点：椭圆定义（焦半径之和 = 2a） ｜ 均值不等式 ｜ 焦点三角形 ｜ 满分 100 分 ｜ 建议用时 45 分钟</div>
+
+        <div class="sec">一、相似题（每题 10 分，共 30 分）</div>
+        <div class="q">1．椭圆 x²/25 + y²/16 = 1 上一点 M 到两焦点距离之积的最大值</div>
+        <div class="ln"></div>
+        <div class="q">2．椭圆 x²/9 + y²/4 = 1 上，|MF₁|² + |MF₂|² 的取值范围</div>
+        <div class="ln"></div>
+        <div class="q">3．椭圆 x²/16 + y²/7 = 1 上，|MF₁|·|MF₂| 的取值范围</div>
+        <div class="ln"></div>
+
+        <div class="sec">二、变式题（每题 12 分，共 36 分）</div>
+        <div class="q">4．求 |MF₁| − |MF₂| 的最大值，并说明取最大值时 M 的位置</div>
+        <div class="ln"></div>
+        <div class="q">5．若 ∠F₁MF₂ = 90°，求 |MF₁|·|MF₂|</div>
+        <div class="ln"></div>
+        <div class="q">6．若 |MF₁|·|MF₂| = 8，求 △MF₁F₂ 的面积（与第 5 题互为逆命题）</div>
+        <div class="ln"></div>
+
+        <div class="sec">三、综合运用题（每题 17 分，共 34 分）</div>
+        <div class="q">7．(1) 积的最大值及 M 坐标；(2) 平方和的取值范围；(3) 面积为 √5 时求积</div>
+        <div class="ln"></div>
+        <div class="ln"></div>
+        <div class="q">8．(1) 证明 mn = 4 + (5/4)y_M²；(2) 求 mn 的范围；(3) mn = 7 时求 △MF₁F₂ 的面积</div>
+        <div class="ln"></div>
+
+        <div class="note">本卷由「举一反三」工作台自动生成 ｜ 参考答案与详解见另页</div>
+      </div>
+
+      <div class="dshell-card" style="margin-top:14px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">出图规格</h2>
+        <table class="dshell-table">
+          <thead><tr><th style="width:26%">项目</th><th style="width:30%">取值</th><th>说明</th></tr></thead>
+          <tbody>
+            <tr><td>图片格式</td><td>PNG（高清长图）</td><td>按 A4 比例排版，可整张另存或打印</td></tr>
+            <tr><td>题目构成</td><td>相似题 3 + 变式题 3 + 综合运用题 1–2</td><td>全部与窗口2 的原题同源</td></tr>
+            <tr><td>试卷张数</td><td>1 张（题多时自动续页）</td><td>续页命名 <code class="k">举一反三-变式卷-02.png</code></td></tr>
+            <tr><td>配套内容</td><td>参考答案与详解</td><td>可另出一张答案页图片</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ============ 使用说明 ============ -->
+    <div class="panel" id="pHow">
+      <div class="dshell-card" style="margin-top:12px">
+        <h2 class="dshell-sub" style="margin:0 0 8px">三个窗口怎么配合</h2>
+        <div class="dshell-list">
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">窗口2：放你的原题（图片），窗口名就是题目名</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">窗口3：放这道题的知识点、解题思路与解题方法</span></div>
+          <div class="dshell-listItem"><span class="dshell-listItemTitle">窗口1（本窗）：把举一反三生成的相似题 / 变式题 / 综合运用题排成一张试卷，以图片返回</span></div>
+        </div>
+        <div class="dshell-divider"></div>
+        <div class="dshell-kv">
+          <div class="dshell-kvRow"><span class="dshell-kvKey">当前状态</span><span class="dshell-kvValue">已生成 2 张图（椭圆焦半径之积专题）：试题页 举一反三-变式卷.png + 参考答案与详解页 举一反三-变式卷-01.png</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">更新方式</span><span class="dshell-kvValue">在对话里说"再加一道 / 换一版"，我会重出图并自动刷新本窗</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">放大看</span><span class="dshell-kvValue">单击缩略图 → 弹层查看（可上下滚动看整张长卷）；<strong>双击缩略图 → 直接面板全屏</strong>（图片铺满窗口宽度，不调用浏览器全屏，所以不会被自动踢出）；再双击图片或按 Esc 退出。想要浏览器级全屏可按 F11</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">自动刷新</span><span class="dshell-kvValue">已开启：每 4 秒检查一次刷新标记（举一反三-刷新标记.json），题目分析 / 试卷出图完成后本窗自动重载；也可用「⏸ 暂停自动刷新」按钮关掉</span></div>
+          <div class="dshell-kvRow"><span class="dshell-kvKey">产物文件</span><span class="dshell-kvValue"><code class="k">窗口1-举一反三变式题试卷.html</code></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 放大层 -->
+  <div class="modal" id="modal">
+    <div class="modal-x" id="modalX">✕</div>
+    <button class="dshell-btn" id="modalFs" style="position:fixed;top:12px;left:20px;z-index:10001">⛶ 面板全屏 / 退出</button>
+    <img id="modalImg" alt="试卷" />
+    <div class="modalCap" id="modalCap"></div>
+  </div>
+
+  <script>
+    (function () {
+      var NAMES = [
+        '举一反三-变式卷.png',
+        '举一反三-变式卷-01.png',
+        '举一反三-变式卷-02.png',
+        '举一反三-变式卷-03.png',
+        '举一反三-变式卷-04.png',
+        '举一反三-变式卷-05.png'
+      ];
+      var grid = document.getElementById('grid');
+      var slot = document.getElementById('slot');
+      var stPaper = document.getElementById('stPaper');
+      var modal = document.getElementById('modal');
+      var modalImg = document.getElementById('modalImg');
+      var modalCap = document.getElementById('modalCap');
+
+      // 标签页
+      var tabs = document.querySelectorAll('.dshell-tab');
+      function activate(id) {
+        for (var j = 0; j < tabs.length; j++) {
+          tabs[j].classList.toggle('dshell-tabOn', tabs[j].getAttribute('data-panel') === id);
+        }
+        var ps = document.querySelectorAll('.panel');
+        for (var k = 0; k < ps.length; k++) ps[k].classList.toggle('on', ps[k].id === id);
+      }
+      for (var i = 0; i < tabs.length; i++) {
+        tabs[i].addEventListener('click', function () { activate(this.getAttribute('data-panel')); });
+      }
+      document.getElementById('btnPlan').addEventListener('click', function () { activate('pPlan'); });
+
+      function fsOn(el, onFail) {
+        var f = el.requestFullscreen || el.webkitRequestFullscreen || el.msRequestFullscreen;
+        if (!f) { if (onFail) onFail(); return; }
+        try {
+          var p = f.call(el);
+          if (p && p.catch) p.catch(function () { if (onFail) onFail(); });
+        } catch (e) { if (onFail) onFail(); }
+      }
+      function fsOff() {
+        var d = document, f = d.exitFullscreen || d.webkitExitFullscreen || d.msExitFullscreen;
+        if (f && (d.fullscreenElement || d.webkitFullscreenElement)) { try { f.call(d); } catch (e) {} }
+      }
+      function isFull() { return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+
+      var openedAt = 0;
+      var CAPTION = '';
+      window.__viewerOpen = false;
+      function capText(extra) {
+        modalCap.textContent = CAPTION + '　｜　双击图片或点左上角按钮切换面板全屏　｜　Esc 或点空白处关闭' + (extra ? '　｜　' + extra : '');
+      }
+      function toggleFull(el) {
+        // 只做「面板内全屏」：不调用浏览器全屏 API，避免整个浏览器被放大后又被踢出来
+        var on = modal.classList.toggle('immersive');
+        capText(on ? '已进入面板全屏：再点一次按钮或双击图片即可退出（想要浏览器级全屏可按 F11）' : '');
+      }
+      function openModal(src, cap, wantFull) {
+        modalImg.src = src;
+        CAPTION = cap;
+        capText('');
+        modal.classList.add('open');
+        openedAt = Date.now();
+        window.__viewerOpen = true;                      // 查看大图期间暂停自动刷新
+        if (window.__viewerPause) window.__viewerPause();
+        if (wantFull) toggleFull(modal);
+      }
+      function closeModal(force) {
+        // 500ms 保护：双击的第二下会落在弹层空白处，不能让它把刚打开的弹层关掉
+        if (!force && Date.now() - openedAt < 500) return;
+        modal.classList.remove('open');
+        modal.classList.remove('immersive');
+        fsOff();
+        window.__viewerOpen = false;
+        if (window.__viewerResume) window.__viewerResume();  // 关闭后立刻补一次刷新检查
+      }
+      modal.addEventListener('click', function (e) {
+        if (e.target.id !== 'modal') return;
+        if (e.detail > 1) return;
+        closeModal(false);
+      });
+      document.getElementById('modalX').addEventListener('click', function () { closeModal(true); });
+      document.getElementById('modalFs').addEventListener('click', function (e) {
+        e.stopPropagation();
+        toggleFull(modal);
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeModal(false);
+      });
+      modalImg.addEventListener('dblclick', function (e) {
+        e.stopPropagation();
+        toggleFull(modal);
+      });
+      /* 退出全屏时不自动关闭弹层：避免"刚全屏就被退出"的错觉，按 Esc 第二次才关闭 */
+
+      function render(found) {
+        grid.innerHTML = '';
+        if (!found.length) {
+          slot.style.display = '';
+          stPaper.textContent = '暂未发现试卷图片，等待生成';
+          document.getElementById('bdPaper').textContent = '试卷图片：等待生成';
+          document.getElementById('bdPaper').className = 'dshell-badge dshell-badgeWait';
+          document.getElementById('bdOK').style.display = 'none';
+          document.getElementById('sPaper').textContent = '0';
+          return;
+        }
+        slot.style.display = 'none';
+        stPaper.textContent = '已载入 ' + found.length + ' 张试卷图片';
+        document.getElementById('bdPaper').textContent = '试卷图片：已就位';
+        document.getElementById('bdPaper').className = 'dshell-badge dshell-badgeDone';
+        document.getElementById('bdOK').style.display = '';
+        document.getElementById('sPaper').textContent = String(found.length);
+
+        found.forEach(function (it, idx) {
+          var card = document.createElement('div');
+          card.className = 'paperCard';
+
+          var img = document.createElement('img');
+          img.src = it.src;
+          img.alt = it.name;
+          img.loading = 'lazy';
+          card.appendChild(img);
+
+          var body = document.createElement('div');
+          body.className = 'paperBody';
+
+          var nm = document.createElement('div');
+          nm.className = 'paperName';
+          nm.textContent = '第 ' + (idx + 1) + ' 张 · ' + it.name + '　（双击全屏）';
+          body.appendChild(nm);
+
+          var acts = document.createElement('div');
+          acts.className = 'paperActs';
+
+          var bZoom = document.createElement('button');
+          bZoom.className = 'dshell-btn';
+          bZoom.textContent = '🔍 放大查看';
+          bZoom.addEventListener('click', function (e) { e.stopPropagation(); openModal(it.src, it.name, false); });
+          acts.appendChild(bZoom);
+
+          var aDl = document.createElement('a');
+          aDl.className = 'dshell-btn dshell-btnGhost';
+          aDl.textContent = '⤓ 另存图片';
+          aDl.href = it.src;
+          aDl.setAttribute('download', it.name);
+          aDl.style.textDecoration = 'none';
+          acts.appendChild(aDl);
+
+          var bPrint = document.createElement('button');
+          bPrint.className = 'dshell-btn dshell-btnGhost';
+          bPrint.textContent = '🖨 打印';
+          bPrint.addEventListener('click', function (e) {
+            e.stopPropagation();
+            var w = window.open('', '_blank');
+            if (!w) return;
+            w.document.write('<title>' + it.name + '</title><body style="margin:0"><img src="' + it.src + '" style="width:100%" onload="window.print()">');
+            w.document.close();
+          });
+          acts.appendChild(bPrint);
+
+          body.appendChild(acts);
+          card.appendChild(body);
+          var clickTimer = null;
+          card.addEventListener('click', function (e) {
+            if (e.detail > 1) return;          // 双击里的第二下不再当单击处理
+            e.stopPropagation();
+            clearTimeout(clickTimer);
+            clickTimer = setTimeout(function () { openModal(it.src, it.name, false); }, 250);
+          });
+          card.addEventListener('dblclick', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            clearTimeout(clickTimer);          // 取消挂起的"单击打开"，避免刚打开又被第二下关掉
+            openModal(it.src, it.name, true);
+          });
+          grid.appendChild(card);
+        });
+      }
+
+      // 相对路径优先；若页面不是从项目根目录渲染，则回退到工作台静态托管路由
+      var PREFIXES = ['', '/api/worktable/site/'];
+      function probeOne(name, pi, onDone) {
+        if (pi >= PREFIXES.length) { onDone(null); return; }
+        var p = new Image();
+        p.onload = function () { onDone({ name: name, src: p.src, order: NAMES.indexOf(name) }); };
+        p.onerror = function () { probeOne(name, pi + 1, onDone); };
+        p.src = PREFIXES[pi] + encodeURI(name) + '?t=' + Date.now();
+      }
+
+      function probeAll() {
+        stPaper.textContent = '正在检查试卷图片…';
+        var found = [];
+        var pending = NAMES.length;
+        NAMES.forEach(function (n) {
+          probeOne(n, 0, function (hit) {
+            if (hit) found.push(hit);
+            pending--;
+            if (pending === 0) {
+              found.sort(function (a, b) { return a.order - b.order; });
+              render(found);
+            }
+          });
+        });
+      }
+
+      document.getElementById('btnReload').addEventListener('click', probeAll);
+      probeAll();
+
+      /* ===== 自动刷新：试卷出图 / 本页更新后，窗口自动刷新 ===== */
+      (function () {
+        var MARK = '举一反三-刷新标记.json';
+        var SELF = '窗口1-举一反三变式题试卷.html';
+        var KEY = '窗口1';
+        var badge = document.getElementById('bdAuto');
+        var info = document.getElementById('stAuto');
+        var btn = document.getElementById('btnAuto');
+        var baseRev = null, selfHash = null, paused = false;
+
+        function stamp(t) {
+          return ('0' + t.getHours()).slice(-2) + ':' + ('0' + t.getMinutes()).slice(-2) + ':' + ('0' + t.getSeconds()).slice(-2);
+        }
+        function hash(s) { var h = 5381, i = s.length; while (i) { h = (h * 33 ^ s.charCodeAt(--i)) >>> 0; } return h; }
+        function lbl(t, ok) { if (badge) { badge.textContent = t; badge.className = 'dshell-badge ' + (ok ? 'dshell-badgeDone' : 'dshell-badgeWait'); } }
+        function note(t) { if (info) info.textContent = t; }
+
+        function checkSelf() {
+          return fetch('/api/worktable/site/' + encodeURI(SELF) + '?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.text() : null; })
+            .then(function (txt) {
+              if (txt == null) return false;
+              var h = hash(txt);
+              if (selfHash === null) { selfHash = h; return false; }
+              return h !== selfHash;
+            })
+            .catch(function () { return false; });
+        }
+
+        function tick() {
+          if (paused) return;
+          if (window.__viewerOpen) {   // 正在看大图：先不刷新，关闭后自动补查一次
+            note('自动刷新 ' + stamp(new Date()) + ' 已暂停（正在查看大图，关闭后自动继续）');
+            return;
+          }
+          fetch('/api/worktable/site/' + encodeURI(MARK) + '?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (j) {
+              var rev = null;
+              if (j) {
+                var w = (j.windows || {})[KEY] || {};
+                rev = String(w.rev != null ? w.rev : j.rev);
+              }
+              note('自动刷新 ' + stamp(new Date()) + ' 已检查' + (rev ? ' · rev ' + rev : ' · 标记缺失'));
+              lbl('自动刷新：开' + (rev ? ' · rev ' + rev : ''), true);
+              if (rev !== null) {
+                if (baseRev === null) baseRev = rev;
+                else if (rev !== baseRev) { location.reload(); return null; }
+              }
+              return checkSelf();
+            })
+            .then(function (changed) { if (changed) location.reload(); })
+            .catch(function () { lbl('自动刷新：连接失败', false); });
+        }
+
+        if (btn) {
+          btn.addEventListener('click', function () {
+            paused = !paused;
+            btn.textContent = paused ? '▶ 恢复自动刷新' : '⏸ 暂停自动刷新';
+            if (paused) lbl('自动刷新：已暂停', false); else tick();
+          });
+        }
+        window.__viewerPause = function () {
+          lbl('自动刷新：暂停（查看大图）', false);
+          note('自动刷新已暂停：正在查看大图，关闭后自动检查');
+        };
+        window.__viewerResume = function () { if (!paused) tick(); };
+        setInterval(tick, 4000);
+        document.addEventListener('visibilitychange', function () { if (!document.hidden && !paused) tick(); });
+        window.addEventListener('focus', function () { if (!paused) tick(); });
+        tick();
+      })();
+    })();
+  </script>
+</body>
+</html>
