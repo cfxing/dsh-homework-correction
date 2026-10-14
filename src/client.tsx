@@ -61,8 +61,10 @@ function HomeworkWorkspace({ close }: { close: () => void }) {
   const load = async () => {
     try {
       const response = await fetch(API + '/reports')
-      if (!response.ok) throw new Error('读取历史失败')
-      setReports(await response.json())
+      const data = await readJsonResponse(response, '读取历史失败')
+      if (!response.ok) throw new Error(data?.error || '读取历史失败（HTTP ' + response.status + '）')
+      if (!Array.isArray(data)) throw new Error('历史接口返回格式不正确：预期为 JSON 数组')
+      setReports(data)
     } catch (e) { setError(message(e)) }
   }
   useEffect(() => { void load() }, [])
@@ -81,8 +83,9 @@ function HomeworkWorkspace({ close }: { close: () => void }) {
     setBusy(true); setError('')
     try {
       const response = await fetch(API + '/grade', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ imageDataUrl: image, instruction }) })
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error || '批改失败')
+      const data = await readJsonResponse(response, '批改失败')
+      if (!response.ok) throw new Error(data?.error || '批改失败（HTTP ' + response.status + '）')
+      if (!data || typeof data !== 'object') throw new Error('批改接口返回格式不正确：预期为 JSON 对象')
       setSelected(data); setModel(data.provider + ' / ' + data.model); await load()
     } catch (e) { setError(message(e)) } finally { setBusy(false) }
   }
@@ -126,3 +129,16 @@ function verdictClass(value: unknown): string {
   return 'warn'
 }
 function message(error: unknown): string { return error instanceof Error ? error.message : String(error) }
+
+async function readJsonResponse(response: Response, fallback: string): Promise<any> {
+  const body = await response.text()
+  if (!body.trim()) {
+    throw new Error(fallback + '：服务器返回空响应（HTTP ' + response.status + '）。请检查插件 API 路由是否已激活，并查看 Harness 服务端日志。')
+  }
+  try {
+    return JSON.parse(body)
+  } catch {
+    const preview = body.slice(0, 240).replace(/\\s+/g, ' ')
+    throw new Error(fallback + '：服务器返回的不是有效 JSON（HTTP ' + response.status + '）。响应内容：' + preview)
+  }
+}
