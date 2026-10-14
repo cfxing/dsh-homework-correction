@@ -138,7 +138,7 @@ async function readJsonResponse(response: Response, fallback: string): Promise<a
   try {
     return JSON.parse(body)
   } catch {
-    const preview = body.slice(0, 240).replace(/\\s+/g, ' ')
+    const preview = body.slice(0, 240).replace(/\s+/g, ' ')
     throw new Error(fallback + '：服务器返回的不是有效 JSON（HTTP ' + response.status + '）。响应内容：' + preview)
   }
 }
