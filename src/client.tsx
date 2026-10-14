@@ -5,7 +5,8 @@ const PLUGIN_ID = 'dsh-homework-correction'
 const API = '/homework-correction/v1'
 export const inject = ['slots', 'layout']
 
-type Report = { id: string; createdAt: string; model: string; provider: string; report: any; imagePath?: string }
+type Report = { id: string; createdAt: string; model: string; provider: string; report: any; warnings?: string[]; imagePath?: string }
+type VisionModel = { provider: string; providerName?: string; model: string; name?: string; label: string }
 
 export function apply(ctx: Context): void {
   try {
@@ -42,6 +43,7 @@ function installStyles(): void {
     '.hwc-card h2{font-size:16px;margin:0 0 12px}.hwc-drop{display:flex;flex-direction:column;gap:12px;align-items:center;justify-content:center;min-height:180px;border:1px dashed #aebbd0;border-radius:12px;padding:18px;text-align:center;background:#f8faff}',
     '.hwc-drop img{max-width:100%;max-height:320px;object-fit:contain;border-radius:8px}.hwc-drop input{max-width:100%}.hwc-btn{border:1px solid #d3dae6;border-radius:9px;padding:8px 13px;background:#fff;color:#26354b;cursor:pointer}.hwc-btn.primary{background:#3168df;border-color:#3168df;color:#fff}.hwc-btn:disabled{opacity:.55;cursor:wait}',
     '.hwc-field{display:flex;flex-direction:column;gap:6px;margin-top:14px}.hwc-field textarea{min-height:74px;resize:vertical;border:1px solid #d5dce7;border-radius:8px;padding:9px;font:inherit;width:100%;box-sizing:border-box}',
+    '.hwc-field select{border:1px solid #d5dce7;border-radius:8px;padding:8px 9px;font:inherit;width:100%;box-sizing:border-box;background:#fff;color:inherit}',
     '.hwc-error{padding:10px 12px;border-radius:8px;background:#fff0f0;color:#a8212a}.hwc-report-list{display:flex;flex-direction:column;gap:8px}.hwc-report-row{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid #e2e7ef;border-radius:10px;padding:10px;text-align:left;background:#fff;color:inherit;cursor:pointer}',
     '.hwc-result{white-space:pre-wrap;overflow-wrap:anywhere}.hwc-result h3{font-size:14px;margin:16px 0 8px}.hwc-question{padding:12px 0;border-top:1px solid #e8ebf1}.hwc-verdict{font-weight:700}.hwc-verdict.bad{color:#b4232d}.hwc-verdict.good{color:#137647}.hwc-verdict.warn{color:#9a5b00}',
     '@media(max-width:800px){.hwc-grid{grid-template-columns:1fr}.hwc-shell{padding:14px}}'
@@ -58,6 +60,9 @@ function HomeworkWorkspace({ close }: { close: () => void }) {
   const [reports, setReports] = useState<Report[]>([])
   const [selected, setSelected] = useState<Report | null>(null)
   const [model, setModel] = useState('')
+  const [models, setModels] = useState<VisionModel[]>([])
+  const [modelKey, setModelKey] = useState('')
+  const [modelNote, setModelNote] = useState('')
   const load = async () => {
     try {
       const response = await fetch(API + '/reports')
@@ -67,7 +72,30 @@ function HomeworkWorkspace({ close }: { close: () => void }) {
       setReports(data)
     } catch (e) { setError(message(e)) }
   }
-  useEffect(() => { void load() }, [])
+  const loadModels = async () => {
+    try {
+      const response = await fetch(API + '/models')
+      const data = await readJsonResponse(response, '读取模型清单失败')
+      if (!response.ok) throw new Error(data?.error || '读取模型清单失败（HTTP ' + response.status + '）')
+      const list: VisionModel[] = Array.isArray(data?.visionModels) ? data.visionModels : []
+      setModels(list)
+      const current = data?.selected
+      setModelKey(current?.provider && current?.model ? current.provider + '\u0000' + current.model : '')
+      if (!list.length) {
+        setModelNote('DSH 当前没有声明支持图片输入的模型：请在模型配置中为该模型声明 input: [text, image]，或启用视觉模型提供商后刷新。')
+      } else {
+        setModelNote(Array.isArray(data?.warnings) && data.warnings.length ? String(data.warnings.join('；')) : '')
+      }
+    } catch (e) { setModelNote(message(e)) }
+  }
+  const chooseModel = async (key: string) => {
+    setModelKey(key)
+    const [provider, chosen] = key.split('\u0000')
+    try {
+      await fetch(API + '/models', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ provider, model: chosen }) })
+    } catch (e) { setModelNote('保存模型选择失败：' + message(e)) }
+  }
+  useEffect(() => { void load(); void loadModels() }, [])
   const pick = async (file?: File) => {
     if (!file) return
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) { setError('请选择 PNG、JPEG 或 WebP 图片'); return }
@@ -82,7 +110,8 @@ function HomeworkWorkspace({ close }: { close: () => void }) {
     if (!image) { setError('请先上传作业照片'); return }
     setBusy(true); setError('')
     try {
-      const response = await fetch(API + '/grade', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ imageDataUrl: image, instruction }) })
+      const [provider, chosen] = modelKey ? modelKey.split('\u0000') : ['', '']
+      const response = await fetch(API + '/grade', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ imageDataUrl: image, instruction, provider: provider || undefined, model: chosen || undefined }) })
       const data = await readJsonResponse(response, '批改失败')
       if (!response.ok) throw new Error(data?.error || '批改失败（HTTP ' + response.status + '）')
       if (!data || typeof data !== 'object') throw new Error('批改接口返回格式不正确：预期为 JSON 对象')
@@ -100,11 +129,18 @@ function HomeworkWorkspace({ close }: { close: () => void }) {
         <input type="file" accept="image/png,image/jpeg,image/webp" onChange={e => void pick(e.target.files?.[0])} />
       </label>
       {filename && <p className="hwc-muted">已选择：{filename}</p>}
+      <label className="hwc-field">识别模型（读取自 DSH 已配置的模型）
+        <select value={modelKey} onChange={e => void chooseModel(e.target.value)}>
+          {!models.length && <option value="">无可用视觉模型</option>}
+          {models.map(item => <option key={item.provider + '\u0000' + item.model} value={item.provider + '\u0000' + item.model}>{item.label}（{item.provider}）</option>)}
+        </select>
+      </label>
+      {modelNote && <p className="hwc-muted">{modelNote}</p>}
       <label className="hwc-field">批改要求（可选）<textarea value={instruction} onChange={e => setInstruction(e.target.value)} placeholder="例如：八年级数学，满分 100 分，步骤不完整要扣分…" /></label>
-      <p><button className="hwc-btn primary" disabled={busy || !image} onClick={() => void grade()}>{busy ? '正在识别并批改…' : '开始批改'}</button> <button className="hwc-btn" disabled={busy} onClick={() => { setImage(''); setFilename(''); setSelected(null); setError('') }}>清空</button></p>
-      <div className="hwc-muted">模型配置来自 DSH 本机 settings.yaml；插件不会把 API Key 写入页面或仓库。</div></section>
+      <p><button className="hwc-btn primary" disabled={busy || !image} onClick={() => void grade()}>{busy ? '正在识别并批改…' : '开始批改'}</button> <button className="hwc-btn" disabled={busy} onClick={() => { setImage(''); setFilename(''); setSelected(null); setError('') }}>清空</button> <button className="hwc-btn" disabled={busy} onClick={() => void loadModels()}>刷新模型</button></p>
+      <div className="hwc-muted">模型清单与调用都通过 DSH 的 llm 服务完成，凭据由 Harness 保管；插件不会把 API Key 写入页面或仓库。</div></section>
       <section className="hwc-card"><h2>2. 批改报告</h2>
-        {selected ? <><div className="hwc-muted">{new Date(selected.createdAt).toLocaleString()} · {model}</div><div className="hwc-result">
+        {selected ? <><div className="hwc-muted">{new Date(selected.createdAt).toLocaleString()} · {model}</div>{!!selected.warnings?.length && <p className="hwc-muted">提示：{selected.warnings.join('；')}</p>}<div className="hwc-result">
           {report?.subject && <p><b>学科：</b>{report.subject}　{report.grade || ''}</p>}
           {report?.summary && <p><b>总评：</b>{report.summary.score ?? '待核分'} 分 / {report.summary.total ?? questions.length} 题；正确 {report.summary.correct ?? '—'}，错误 {report.summary.incorrect ?? '—'}，部分正确 {report.summary.partial ?? '—'}，待复核 {report.summary.needsReview ?? '—'}。</p>}
           {questions.map((q: any, i: number) => <article className="hwc-question" key={i}><h3>第 {q.number ?? i + 1} 题 <span className={'hwc-verdict ' + verdictClass(q.verdict)}>{q.verdict || '待复核'}</span></h3>

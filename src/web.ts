@@ -2,18 +2,20 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { gradeImage } from './vision.js'
+import { gradeImage, describeCatalogue, visionRoutes, invalidateCatalogue, type VisionRuntime } from './vision.js'
 
 const PREFIX = '/homework-correction/v1'
 const HOME = process.env.DSH_HOME || join(homedir(), '.dsh')
 const DATA_DIR = join(HOME, 'homework-correction')
 const UPLOAD_DIR = join(DATA_DIR, 'uploads')
 const REPORTS_FILE = join(DATA_DIR, 'reports.json')
+const SETTINGS_FILE = join(DATA_DIR, 'settings.json')
 
 type Handler = (req: IncomingMessage, res: ServerResponse) => void | Promise<void>
 type WebLike = {
   register: (route: { kind: 'exact'; path: string; handler: Handler }) => () => void
 }
+type VisionRuntimeProvider = () => VisionRuntime
 
 function send(res: ServerResponse, status: number, value: unknown): void {
   res.writeHead(status, {
@@ -70,14 +72,81 @@ async function saveReports(reports: any[]): Promise<void> {
   await writeFile(REPORTS_FILE, JSON.stringify(reports.slice(0, 200), null, 2), 'utf8')
 }
 
+/** 工作台里手动选定的模型路线，重启后仍生效。 */
+async function loadSelection(): Promise<{ provider?: string; model?: string }> {
+  try {
+    const value = JSON.parse(await readFile(SETTINGS_FILE, 'utf8'))
+    return value && typeof value === 'object' ? value : {}
+  } catch {
+    return {}
+  }
+}
+
+async function saveSelection(selection: { provider?: string; model?: string }): Promise<void> {
+  await mkdir(DATA_DIR, { recursive: true })
+  await writeFile(SETTINGS_FILE, JSON.stringify(selection, null, 2), 'utf8')
+}
+
 function route(ctx: WebLike, path: string, handler: Handler): () => void {
   return ctx.register({ kind: 'exact', path, handler })
 }
 
-export function registerHomeworkWeb(ctx: WebLike): () => void {
+export function registerHomeworkWeb(ctx: WebLike, visionRuntime: VisionRuntimeProvider): () => void {
   const disposers = [
     route(ctx, '/homework-correction/health', (_req, res) => {
-      send(res, 200, { ok: true, plugin: 'dsh-homework-correction' })
+      send(res, 200, { ok: true, plugin: 'dsh-homework-correction', source: 'dsh-llm-service' })
+    }),
+    route(ctx, PREFIX + '/models', async (req, res) => {
+      if (req.method === 'GET') {
+        try {
+          invalidateCatalogue()
+          const catalogue = await describeCatalogue(visionRuntime(), { refresh: true })
+          const selection = await loadSelection()
+          const usable = visionRoutes(catalogue).map((item) => ({
+            provider: item.provider,
+            providerName: item.providerName,
+            model: item.model,
+            name: item.name,
+            label: item.name && item.name !== item.model ? `${item.name}（${item.model}）` : item.model,
+          }))
+          const selected = selection.provider && selection.model
+            ? usable.find((item) => item.provider === selection.provider && item.model === selection.model) || selection
+            : usable[0] || null
+          send(res, 200, {
+            visionModels: usable,
+            defaultRoute: usable[0] || null,
+            selected,
+            allModels: catalogue.models.map((item) => ({
+              provider: item.provider,
+              model: item.model,
+              inputModalities: item.modalities,
+            })),
+            warnings: catalogue.warnings,
+          })
+        } catch (err) {
+          send(res, 500, { error: err instanceof Error ? err.message : String(err), visionModels: [], allModels: [], warnings: [] })
+        }
+        return
+      }
+      if (req.method === 'POST') {
+        if (!sameOrigin(req)) {
+          send(res, 403, { error: '请求来源校验失败：请从当前 DeepSeek Harness 页面访问此接口' })
+          return
+        }
+        try {
+          const body = await readBody(req)
+          const selection = {
+            provider: body.provider ? String(body.provider) : undefined,
+            model: body.model ? String(body.model) : undefined,
+          }
+          await saveSelection(selection)
+          send(res, 200, { ok: true, selection })
+        } catch (err) {
+          send(res, 400, { error: err instanceof Error ? err.message : String(err) })
+        }
+        return
+      }
+      methodNotAllowed(res, 'GET, POST')
     }),
     route(ctx, PREFIX + '/reports', async (req, res) => {
       if (req.method !== 'GET') {
@@ -113,7 +182,11 @@ export function registerHomeworkWeb(ctx: WebLike): () => void {
           return
         }
 
-        const result = await gradeImage(imageDataUrl, buildPrompt(String(body.instruction || '')))
+        const saved = await loadSelection()
+        const result = await gradeImage(visionRuntime(), imageDataUrl, buildPrompt(String(body.instruction || '')), {
+          provider: body.provider ? String(body.provider) : saved.provider,
+          model: body.model ? String(body.model) : saved.model,
+        })
         const id = crypto.randomUUID()
         const ext = /^data:image\/png/i.test(imageDataUrl)
           ? 'png'
@@ -127,6 +200,7 @@ export function registerHomeworkWeb(ctx: WebLike): () => void {
           createdAt: new Date().toISOString(),
           model: result.model,
           provider: result.provider,
+          warnings: result.warnings,
           report: result.report,
           imagePath,
         }
