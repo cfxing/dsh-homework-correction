@@ -40,7 +40,7 @@ export function registerHomeworkWeb(ctx: WebLike): () => void {
   const disposers = [
     ctx.register({ kind: 'exact', path: '/homework-correction/health', handler: (_req, res) => send(res, 200, { ok: true, plugin: 'dsh-homework-correction' }) }),
     ctx.register({ kind: 'prefix', path: PREFIX, handler: async (req, res) => {
-      if (!sameOrigin(req)) { res.writeHead(403).end(); return }
+      if (!sameOrigin(req)) { send(res, 403, { error: '请求来源校验失败：请从当前 DeepSeek Harness 页面访问此接口' }); return }
       try {
         const url = new URL(req.url || '/', 'http://' + (req.headers.host || 'localhost'))
         const path = url.pathname.slice(PREFIX.length)
@@ -72,7 +72,9 @@ export function registerHomeworkWeb(ctx: WebLike): () => void {
         }
         return send(res, 404, { error: '接口不存在' })
       } catch (err) {
-        return send(res, 400, { error: err instanceof Error ? err.message : String(err) })
+        const message = err instanceof Error ? err.message : String(err)
+        const status = /请求太大|超过|太大/.test(message) ? 413 : /JSON|Unexpected end/i.test(message) ? 400 : 500
+        return send(res, status, { error: message || '服务器处理请求失败' })
       }
     } }),
   ]
