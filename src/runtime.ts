@@ -8,15 +8,33 @@ export const inject = ['tools']
 export function bootstrap(ctx: Context): void {
   const runtime = ctx as any
   let disposeWeb: (() => void) | undefined
-  const registerWeb = (web: any) => {
-    disposeWeb?.()
-    disposeWeb = registerHomeworkWeb(web)
-  }
   try {
-    if (typeof runtime.inject === 'function') runtime.inject(['webServer'], registerWeb)
-    else if (runtime.webServer) registerWeb(runtime)
+    if (typeof runtime.inject === 'function') {
+      // Cordis inject callback receives a child context; the service lives at webCtx.webServer.
+      runtime.inject(['webServer'], (webCtx: any) => {
+        try {
+          if (!webCtx?.webServer || typeof webCtx.webServer.register !== 'function') {
+            console.error('[dsh-homework-correction] webServer injection completed without a register() service')
+            return
+          }
+          disposeWeb?.()
+          disposeWeb = registerHomeworkWeb(webCtx.webServer)
+          console.info('[dsh-homework-correction] homework API routes mounted')
+          if (typeof webCtx.effect === 'function') {
+            webCtx.effect(() => () => {
+              try { disposeWeb?.() } catch {}
+              disposeWeb = undefined
+            }, 'dsh-homework-correction: web routes lifecycle')
+          }
+        } catch (err) {
+          console.error('[dsh-homework-correction] web route registration failed:', err)
+        }
+      })
+    } else {
+      console.warn('[dsh-homework-correction] ctx.inject is unavailable; homework API routes were not mounted')
+    }
   } catch (err) {
-    console.error('[dsh-homework-correction] web routes unavailable:', err)
+    console.error('[dsh-homework-correction] webServer injection failed:', err)
   }
 
   const tools = runtime.tools
@@ -53,7 +71,6 @@ export function bootstrap(ctx: Context): void {
   if (typeof ctx.effect === 'function') {
     ctx.effect(() => () => {
       try { disposeTool?.() } catch {}
-      try { disposeWeb?.() } catch {}
     }, 'dsh-homework-correction: lifecycle')
   }
 }
